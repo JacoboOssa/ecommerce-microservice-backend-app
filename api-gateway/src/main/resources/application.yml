@@ -62,7 +62,7 @@ spring:
           predicates:
             - Path=/app/**
         - id: SERVICE-DISCOVERY
-          uri: lb://SERVICE-DISCOVERY
+          uri: http://service-discovery:8761
           predicates:
           - Path=/eureka/**
           filters:

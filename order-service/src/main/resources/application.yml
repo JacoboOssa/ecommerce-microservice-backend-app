@@ -12,7 +12,7 @@ spring:
     name: ORDER-SERVICE
   profiles:
     active:
-    - dev
+      - dev
 
 resilience4j:
   circuitbreaker:
@@ -29,13 +29,23 @@ resilience4j:
         sliding-window-type: COUNT_BASED
 
 management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+      base-path: /actuator
   health:
     circuitbreakers:
+      enabled: true
+    livenessstate:
+      enabled: true
+    readinessstate:
       enabled: true
   endpoint:
     health:
       show-details: always
-
+      probes:
+        enabled: true
 
 
 

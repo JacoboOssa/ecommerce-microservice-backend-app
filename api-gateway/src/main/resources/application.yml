@@ -64,12 +64,15 @@ spring:
         - id: SERVICE-DISCOVERY
           uri: lb://SERVICE-DISCOVERY
           predicates:
-            - Path=/eureka/**
+          - Path=/eureka/**
+          filters:
+          - StripPrefix=1
         - id: ZIPKIN-SERVICE
           uri: http://zipkin-service:9411
           predicates:
-            - Path=/zipkin/**
-
+          - Path=/zipkin/**
+          filters:
+          - StripPrefix=1
 resilience4j:
   circuitbreaker:
     instances:

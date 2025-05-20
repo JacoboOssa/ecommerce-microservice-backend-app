@@ -66,8 +66,7 @@ spring:
           predicates:
           - Path=/eureka/**
           filters:
-          #- StripPrefix=1
-          - RewritePath=/eureka/(?<segment>.*), /eureka/$\{segment}
+          - StripPrefix=1
         - id: ZIPKIN-SERVICE
           uri: http://zipkin-service:9411
           predicates:

@@ -66,13 +66,14 @@ spring:
           predicates:
           - Path=/eureka/**
           filters:
-          - StripPrefix=1
+          #- StripPrefix=1
+          - RewritePath=/eureka/(?<segment>.*), /eureka/$\{segment}
         - id: ZIPKIN-SERVICE
           uri: http://zipkin-service:9411
           predicates:
           - Path=/zipkin/**
           filters:
-          - StripPrefix=1
+            - RewritePath=/zipkin/(?<segment>.*), /zipkin/$\{segment}
 resilience4j:
   circuitbreaker:
     instances:

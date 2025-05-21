@@ -17,45 +17,57 @@ spec:
     spec:
       containers:
         - name: product-service
-          image: micsvcwsacr.azurecr.io/product-service:PLACEHOLDER_TAG # Asegúrate que el nombre y tag de la imagen sean correctos
-          imagePullPolicy: IfNotPresent # O Always si la imagen se actualiza frecuentemente en el registry
+          image: ecommerceacrjog.azurecr.io/product-service:latest
+          # imagePullPolicy: IfNotPresent # O Always si la imagen se actualiza frecuentemente en el registry
           ports:
             - containerPort: 8500
-          resources:
-            requests:
-              memory: "128Mi"
-              cpu: "80m"
-            limits:
-              memory: "384Mi"
-              cpu: "250m"
+          # resources:
+          #   requests:
+          #     memory: "128Mi"
+          #     cpu: "80m"
+          #   limits:
+          #     memory: "384Mi"
+          #     cpu: "250m"
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: "dev" # O "prod" u otro perfil según el entorno
-            # Montar propiedades comunes y específicas del servicio
-            - name: SPRING_CONFIG_ADDITIONAL_LOCATION
-              value: "file:/etc/config/common-services.properties,file:/etc/config/product-service.properties"
-          volumeMounts:
-            - name: config-volume
-              mountPath: /etc/config
-          # Opcional: Liveness and Readiness Probes
+              value: "dev"
+            - name: SPRING_ZIPKIN_BASE_URL
+              value: "http://zipkin:9411/"
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:configserver:http://cloud-config:9296"
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: "http://service-discovery:8761/eureka/"
+            - name: EUREKA_INSTANCE
+              value: "product-service"
+
+
+            - name: SPRING_APPLICATION_NAME
+              value: "PRODUCT-SERVICE"
+            - name: SERVER_PORT
+              value: "8500"
+            - name: SERVER_SERVLET_CONTEXT_PATH
+              value: "/product-service"
+
+            # - name: SPRING_CONFIG_ADDITIONAL_LOCATION
+            #   value: "file:/etc/config/common-services.properties,file:/etc/config/product-service.properties"
           livenessProbe:
             httpGet:
-              path: /product-service/actuator/health/liveness # Ajusta la ruta según tu configuración de actuator
+              path: /product-service/actuator/health # Ajusta la ruta según tu configuración de actuator
               port: 8500
             initialDelaySeconds: 60 # Tiempo para que el servicio inicie completamente
             periodSeconds: 10
+            failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /product-service/actuator/health/readiness # Ajusta la ruta según tu configuración de actuator
+              path: /product-service/actuator/health # Ajusta la ruta según tu configuración de actuator
               port: 8500
             initialDelaySeconds: 30
             periodSeconds: 10
-      volumes:
-        - name: config-volume
-          configMap:
-            name: common-config # Referencia al ConfigMap creado
-            items:
-              - key: "common-services.properties"
-                path: "common-services.properties"
-              - key: "product-service.properties"
-                path: "product-service.properties" 
+            failureThreshold: 3
+          volumeMounts:
+          - name: common-config-volume
+            mountPath: /app/config
+          volumes:
+          - name: common-config-volume
+            configMap:
+              name: common-config 

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: payment-service
-  namespace: ecommerce-app
+  #namespace: ecommerce-app
   labels:
     app: payment-service
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: payment-service
-          image: ecommerceacrjog.azurecr.io/payment-service:latest
+          image: jacoboossag/payment-service:latest
           ports:
             - containerPort: 8400
           # resources:
@@ -66,7 +66,7 @@ spec:
           volumeMounts:
             - name: common-config-volume
               mountPath: /app/config
-          volumes:
+      volumes:
         - name: common-config-volume
           configMap:
             name: common-config

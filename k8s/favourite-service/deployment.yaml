@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: favourite-service
-        image: ecommerceacrjog.azurecr.io/favourite-service:latest
+        image: jacoboossag/favourite-service:latest
         ports:
         - containerPort: 8800
         # resources:

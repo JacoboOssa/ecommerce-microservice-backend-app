@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: shipping-service
-  namespace: ecommerce-app
+#  namespace: ecommerce-app
   labels:
     app: shipping-service
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: shipping-service
-          image:  ecommerceacrjog.azurecr.io/shipping-service:latest
+          image:  jacoboossag/shipping-service:latest
           # imagePullPolicy: IfNotPresent 
           ports:
             - containerPort: 8600

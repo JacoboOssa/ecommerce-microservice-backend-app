@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: product-service
-  namespace: ecommerce-app
+  #namespace: ecommerce-app
   labels:
     app: product-service
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: product-service
-          image: ecommerceacrjog.azurecr.io/product-service:latest
+          image: jacoboossag/product-service:latest
           # imagePullPolicy: IfNotPresent # O Always si la imagen se actualiza frecuentemente en el registry
           ports:
             - containerPort: 8500
@@ -67,7 +67,7 @@ spec:
           volumeMounts:
           - name: common-config-volume
             mountPath: /app/config
-          volumes:
+      volumes:
           - name: common-config-volume
             configMap:
               name: common-config 

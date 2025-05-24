@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: user-service
-  namespace: ecommerce-app
+#  namespace: ecommerce-app
   labels:
     app: user-service
 spec:
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: user-service
-          image: ecommerceacrjog.azurecr.io/user-service:latest 
+          image: jacoboossag/user-service:latest
           # imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8700
@@ -68,7 +68,7 @@ spec:
           volumeMounts:
           - name: common-config-volume
             mountPath: /app/config
-          volumes:
+      volumes:
           - name: common-config-volume
             configMap:
               name: common-config 

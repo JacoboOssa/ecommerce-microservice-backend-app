@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: service-discovery
-        image: ecommerceacrjog.azurecr.io/service-discovery:latest
+        image: jacoboossag/service-discovery:latest
         ports:
         - containerPort: 8761
 #        resources:

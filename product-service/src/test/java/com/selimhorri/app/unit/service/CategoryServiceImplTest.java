@@ -50,5 +50,17 @@ class CategoryServiceImplTest {
         assertEquals(category.getCategoryTitle(), result.getCategoryTitle());
         assertEquals(category.getImageUrl(), result.getImageUrl());
     }
+
+    @Test
+    void testSave_ShouldReturnSavedCategoryDto() {
+        when(categoryRepository.save(any(Category.class))).thenReturn(CategoryUtil.getSampleCategory());
+
+        CategoryDto result = categoryService.save(category);
+
+        assertNotNull(result);
+        assertEquals(category.getCategoryId(), result.getCategoryId());
+        assertEquals(category.getCategoryTitle(), result.getCategoryTitle());
+        assertEquals(category.getImageUrl(), result.getImageUrl());
+    }
 }
 

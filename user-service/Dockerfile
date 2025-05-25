@@ -7,6 +7,6 @@ WORKDIR /home/app
 #COPY user-service/ .
 COPY target/user-service-v0.1.0.jar user-service.jar
 EXPOSE 8700
-ENTRYPOINT ["java", "-Dspring.profiles.active=${SPRING_PROFILES_ACTIVE}", "-jar", "user-service.jar"]
+ENTRYPOINT ["java", "-jar", "user-service.jar"]
 
 

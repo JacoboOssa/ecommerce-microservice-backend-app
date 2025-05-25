@@ -1,4 +1,4 @@
-package com.selimhorri.app.util;
+package com.selimhorri.app.unit.util;
 
 import com.selimhorri.app.domain.Credential;
 import com.selimhorri.app.domain.User;

@@ -269,6 +269,7 @@ pipeline {
             when { branch 'master' }
             steps {
                 script {
+                    sh """
                     echo "🚀 Levantando Locust..."
                     docker run -d --name locust --network ecommerce-test -p 8089:8089 jacoboossag/locust
                     
@@ -276,17 +277,18 @@ pipeline {
                     until curl -s http://localhost:8089 | grep "Locust" > /dev/null; do
                     echo "⌛ Esperando interfaz web de Locust..."
                     sleep 3
-                done
-                
-                echo "🎯 Ejecutando prueba de carga desde Locust..."
-
-                //Ejecutar Locust en modo HEADLESS (sin UI) directamente si lo prefieres
-                docker run --rm --network ecommerce-test jacoboossag/locust \
+                    done
+                    
+                    echo "🎯 Ejecutando prueba de carga desde Locust..."
+                    
+                    //Ejecutar Locust en modo HEADLESS (sin UI) directamente si lo prefieres
+                    docker run --rm --network ecommerce-test jacoboossag/locust \
                     -f /locust/locustfile.py \
                     --host http://favourite-service:8800 \
                     --headless -u 10 -r 2 -t 1m
-
-                echo "✅ Prueba completada"
+                    
+                    echo "✅ Prueba completada"
+                    """
                 }
             }
         }

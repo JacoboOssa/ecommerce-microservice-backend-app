@@ -215,20 +215,6 @@ pipeline {
                         sleep 5
                     done
 
-                    echo "🚀 Levantando PROXY-CLIENT..."
-                    docker run -d --name proxy-client-container --network ecommerce-test -p 8900:8900 \\
-                        -e SPRING_PROFILES_ACTIVE=dev \\
-                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
-                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
-                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
-                        -e EUREKA_INSTANCE=proxy-client-container \\
-                        jacoboossag/proxy-client:${IMAGE_TAG}
-
-                    until curl -s http://localhost:8900/actuator/health | grep '"status":"UP"' > /dev/null; do
-                        echo "⌛ Esperando PROXY-CLIENT..."
-                        sleep 5
-                    done
-
                     echo "🚀 Levantando ORDER-SERVICE..."
                     docker run -d --name order-service-container --network ecommerce-test -p 8300:8300 \\
                         -e SPRING_PROFILES_ACTIVE=dev \\
@@ -328,11 +314,6 @@ pipeline {
                     echo "🚀 Levantando Locust..."
                     docker run -d --name locust --network ecommerce-test -p 8089:8089 jacoboossag/locust
                     
-                    echo "⌛ Esperando que Locust esté listo..."
-                    until curl -s http://localhost:8089 | grep "Locust" > /dev/null; do
-                    echo "⌛ Esperando interfaz web de Locust..."
-                    sleep 5
-                    done
                     
                     echo "🎯 Ejecutando prueba de carga desde Locust..."
                     
@@ -355,16 +336,15 @@ pipeline {
                     echo "🛑 Deteniendo y eliminando contenedores..."
 
                     docker rm -f locust || true
-                    docker rm -f favourite || true
-                    docker rm -f user || true
-                    docker rm -f shipping || true
-                    docker rm -f product || true
-                    docker rm -f payment || true
-                    docker rm -f order-service || true
-                    docker rm -f proxy-client || true
-                    docker rm -f cloud-config || true
-                    docker rm -f eureka || true
-                    docker rm -f zipkin || true
+                    docker rm -f favourite-service-container || true
+                    docker rm -f user-service-container || true
+                    docker rm -f shipping-service-container || true
+                    docker rm -f product-service-container || true
+                    docker rm -f payment-service-container || true
+                    docker rm -f order-service-container || true
+                    docker rm -f cloud-config-container || true
+                    docker rm -f service-discovery-container || true
+                    docker rm -f zipkin-container || true
 
                     echo "🧹 Todos los contenedores eliminados"
                 '''

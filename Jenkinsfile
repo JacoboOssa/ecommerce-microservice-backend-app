@@ -163,7 +163,7 @@ pipeline {
             steps {
                 script {
                     SERVICES.split().each { service ->
-                        sh "docker buildx build --platform linux/amd64,linux/arm64 ${DOCKERHUB_USER}/${service}:${IMAGE_TAG} ./${service}"
+                        sh "docker buildx build --platform linux/amd64,linux/arm64 -t ${DOCKERHUB_USER}/${service}:${IMAGE_TAG} ./${service}"
                     }
                 }
             }

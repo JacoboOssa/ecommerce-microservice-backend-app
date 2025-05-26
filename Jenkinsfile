@@ -189,78 +189,136 @@ pipeline {
                     sh """
                     docker network create ecommerce-test || true
                     echo "🚀 Levantando ZIPKIN..."
-                    docker run -d --name zipkin --network ecommerce-test -p 9411:9411 openzipkin/zipkin
-    
+                    docker run -d --name zipkin-container --network ecommerce-test -p 9411:9411 openzipkin/zipkin
 
                     echo "🚀 Levantando EUREKA..."
-                    docker run -d --name eureka --network ecommerce-test -p 8761:8761 -e SPRING_PROFILES_ACTIVE=dev jacoboossag/service-discovery:${IMAGE_TAG}
+                    docker run -d --name service-discovery-container --network ecommerce-test -p 8761:8761 \\
+                        -e SPRING_PROFILES_ACTIVE=dev \\
+                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                        jacoboossag/service-discovery:${IMAGE_TAG}
+
                     until curl -s http://localhost:8761/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando EUREKA..."
-                        sleep 3
+                        sleep 5
                     done
 
                     echo "🚀 Levantando CLOUD-CONFIG..."
-                    docker run -d --name cloud-config --network ecommerce-test -p 9296:9296 -e SPRING_PROFILES_ACTIVE=dev jacoboossag/cloud-config:${IMAGE_TAG}
+                    docker run -d --name cloud-config-container --network ecommerce-test -p 9296:9296 \\
+                        -e SPRING_PROFILES_ACTIVE=dev \\
+                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                        -e EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-discovery-container:8761/eureka/ \\
+                        -e EUREKA_INSTANCE=cloud-config-container \\
+                        jacoboossag/cloud-config:${IMAGE_TAG}
+
                     until curl -s http://localhost:9296/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando CLOUD-CONFIG..."
-                        sleep 3
+                        sleep 5
                     done
 
-
                     echo "🚀 Levantando PROXY-CLIENT..."
-                    docker run -d --name proxy-client --network ecommerce-test -p 8900:8900 -e SPRING_PROFILES_ACTIVE=dev jacoboossag/proxy-client:${IMAGE_TAG}
+                    docker run -d --name proxy-client-container --network ecommerce-test -p 8900:8900 \\
+                        -e SPRING_PROFILES_ACTIVE=dev \\
+                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                        -e EUREKA_INSTANCE=proxy-client-container \\
+                        jacoboossag/proxy-client:${IMAGE_TAG}
+
                     until curl -s http://localhost:8900/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando PROXY-CLIENT..."
-                        sleep 3
+                        sleep 5
                     done
 
                     echo "🚀 Levantando ORDER-SERVICE..."
-                    docker run -d --name order-service --network ecommerce-test -p 8300:8300 -e SPRING_PROFILES_ACTIVE=dev jacoboossag/order-service:${IMAGE_TAG}
+                    docker run -d --name order-service-container --network ecommerce-test -p 8300:8300 \\
+                        -e SPRING_PROFILES_ACTIVE=dev \\
+                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                        -e EUREKA_INSTANCE=order-service-container \\
+                        jacoboossag/order-service:${IMAGE_TAG}
+
                     until curl -s http://localhost:8300/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando ORDER-SERVICE..."
-                        sleep 3
+                        sleep 5
                     done
 
                     echo "🚀 Levantando PAYMENT..."
-                    docker run -d --name payment --network ecommerce-test -p 8400:8400 -e SPRING_PROFILES_ACTIVE=dev jacoboossag/payment-service:${IMAGE_TAG}
+                    docker run -d --name payment-service-container --network ecommerce-test -p 8400:8400 \\
+                        -e SPRING_PROFILES_ACTIVE=dev \\
+                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                        -e EUREKA_INSTANCE=payment-service-container \\
+                        jacoboossag/payment-service:${IMAGE_TAG}
+
                     until curl -s http://localhost:8400/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando PAYMENT..."
-                        sleep 3
+                        sleep 5
                     done
 
                     echo "🚀 Levantando PRODUCT..."
-                    docker run -d --name product --network ecommerce-test -p 8500:8500 -e SPRING_PROFILES_ACTIVE=dev jacoboossag/product-service:${IMAGE_TAG}
+                    docker run -d --name product-service-container --network ecommerce-test -p 8500:8500 \\
+                        -e SPRING_PROFILES_ACTIVE=dev \\
+                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                        -e EUREKA_INSTANCE=product-service-container \\
+                        jacoboossag/product-service:${IMAGE_TAG}
+
                     until curl -s http://localhost:8500/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando PRODUCT..."
-                        sleep 3
+                        sleep 5
                     done
 
                     echo "🚀 Levantando SHIPPING..."
-                    docker run -d --name shipping --network ecommerce-test -p 8600:8600 -e SPRING_PROFILES_ACTIVE=dev jacoboossag/shipping-service:${IMAGE_TAG}
+                    docker run -d --name shipping-service-container --network ecommerce-test -p 8600:8600 \\
+                        -e SPRING_PROFILES_ACTIVE=dev \\
+                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                        -e EUREKA_INSTANCE=shipping-service-container \\
+                        jacoboossag/shipping-service:${IMAGE_TAG}
+
                     until curl -s http://localhost:8600/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando SHIPPING..."
-                        sleep 3
+                        sleep 5
                     done
 
                     echo "🚀 Levantando USER..."
-                    docker run -d --name user --network ecommerce-test -p 8700:8700 -e SPRING_PROFILES_ACTIVE=dev jacoboossag/user-service:${IMAGE_TAG}
+                    docker run -d --name user-service-container --network ecommerce-test -p 8700:8700 \\
+                        -e SPRING_PROFILES_ACTIVE=dev \\
+                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                        -e EUREKA_INSTANCE=user-service-container \\
+                        jacoboossag/user-service:${IMAGE_TAG}
+
                     until curl -s http://localhost:8700/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando USER..."
-                        sleep 3
+                        sleep 5
                     done
 
                     echo "🚀 Levantando FAVOURITE..."
-                    docker run -d --name favourite --network ecommerce-test -p 8800:8800 -e SPRING_PROFILES_ACTIVE=dev jacoboossag/favourite-service:${IMAGE_TAG}
+                    docker run -d --name favourite-service-container --network ecommerce-test -p 8800:8800 \\
+                        -e SPRING_PROFILES_ACTIVE=dev \\
+                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                        -e EUREKA_INSTANCE=favourite-service-container \\
+                        jacoboossag/favourite-service:${IMAGE_TAG}
+
                     until curl -s http://localhost:8800/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando FAVOURITE..."
-                        sleep 3
+                        sleep 5
                     done
 
                     echo "✅ Todos los contenedores están arriba y saludables."
-                """
+                    """
                 }
             }
         }
+
 
         stage('Run Load Tests with Locust') {
             when { branch 'master' }
@@ -273,7 +331,7 @@ pipeline {
                     echo "⌛ Esperando que Locust esté listo..."
                     until curl -s http://localhost:8089 | grep "Locust" > /dev/null; do
                     echo "⌛ Esperando interfaz web de Locust..."
-                    sleep 3
+                    sleep 5
                     done
                     
                     echo "🎯 Ejecutando prueba de carga desde Locust..."

@@ -209,12 +209,6 @@ pipeline {
                         sleep 3
                     done
 
-                    echo "🚀 Levantando API-GATEWAY..."
-                    docker run -d --name api-gateway --network ecommerce-test -p 8080:8080 -e SPRING_PROFILES_ACTIVE=dev jacoboossag/api-gateway:${IMAGE_TAG}
-                    until curl -s http://localhost:8080/actuator/health | grep '"status":"UP"' > /dev/null; do
-                        echo "⌛ Esperando API-GATEWAY..."
-                        sleep 3
-                    done
 
                     echo "🚀 Levantando PROXY-CLIENT..."
                     docker run -d --name proxy-client --network ecommerce-test -p 8900:8900 -e SPRING_PROFILES_ACTIVE=dev jacoboossag/proxy-client:${IMAGE_TAG}
@@ -311,7 +305,6 @@ pipeline {
                     docker rm -f payment || true
                     docker rm -f order-service || true
                     docker rm -f proxy-client || true
-                    docker rm -f api-gateway || true
                     docker rm -f cloud-config || true
                     docker rm -f eureka || true
                     docker rm -f zipkin || true

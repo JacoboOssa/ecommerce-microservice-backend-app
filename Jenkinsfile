@@ -186,7 +186,7 @@ pipeline {
         stage('Levantar contenedores para pruebas') {
             steps {
                 script {
-                    sh """
+                    sh '''
                     docker network create ecommerce-test || true
                     echo "🚀 Levantando ZIPKIN..."
                     docker run -d --name zipkin-container --network ecommerce-test -p 9411:9411 openzipkin/zipkin
@@ -302,7 +302,7 @@ pipeline {
                     done
 
                     echo "✅ Todos los contenedores están arriba y saludables."
-                    """
+                    '''
                 }
             }
         }

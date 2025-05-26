@@ -311,9 +311,9 @@ pipeline {
 
                     echo "🧹 Todos los contenedores eliminados"
                 '''
+                }
             }
         }
-    }
 
 
 
@@ -341,15 +341,15 @@ pipeline {
         //     }
         // }
 
-    //     stage('Deploy Microservices') {
-    //         when { branch 'master' }
-    //         steps {
-    //             script {
-    //                 echo '👻👻👻👻👻👻'
-    //             }
-    //         }
-    //     }
-    // }
+        // stage('Deploy Microservices') {
+        //     when { branch 'master' }
+        //     steps {
+        //         script {
+        //             echo '👻👻👻👻👻👻'
+        //         }
+        //     }
+        // }
+    }
 
     post {
         success {
@@ -379,5 +379,5 @@ pipeline {
                 echo "🔍 Some tests may have failed. Review test reports."
             }
         }
-    }
+    }    
 }

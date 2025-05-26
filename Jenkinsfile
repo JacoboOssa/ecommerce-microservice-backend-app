@@ -224,10 +224,11 @@ pipeline {
                         -e EUREKA_INSTANCE=order-service-container \\
                         jacoboossag/order-service:${IMAGE_TAG}
 
-                    until curl -s http://localhost:8300/order-service/actuator/health | grep '"status":"UP"' > /dev/null; do
+                    until [ "$(curl -s http://localhost:8300/order-service/actuator/health | jq -r '.status')" = "UP" ]; do
                         echo "⌛ Esperando ORDER-SERVICE..."
                         sleep 5
                     done
+
 
                     echo "🚀 Levantando PAYMENT..."
                     docker run -d --name payment-service-container --network ecommerce-test -p 8400:8400 \\
@@ -237,9 +238,9 @@ pipeline {
                         -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
                         -e EUREKA_INSTANCE=payment-service-container \\
                         jacoboossag/payment-service:${IMAGE_TAG}
-
-                    until curl -s http://localhost:8400/payment-service/actuator/health | grep '"status":"UP"' > /dev/null; do
-                        echo "⌛ Esperando PAYMENT..."
+                    
+                    until [ "$(curl -s http://localhost:8400/payment-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                        echo "⌛ Esperando PAYMENT-SERVICE..."
                         sleep 5
                     done
 
@@ -252,10 +253,11 @@ pipeline {
                         -e EUREKA_INSTANCE=product-service-container \\
                         jacoboossag/product-service:${IMAGE_TAG}
 
-                    until curl -s http://localhost:8500/product-service/actuator/health | grep '"status":"UP"' > /dev/null; do
-                        echo "⌛ Esperando PRODUCT..."
+                    until [ "$(curl -s http://localhost:8500/product-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                        echo "⌛ Esperando PRODUCT-SERVICE..."
                         sleep 5
                     done
+
 
                     echo "🚀 Levantando SHIPPING..."
                     docker run -d --name shipping-service-container --network ecommerce-test -p 8600:8600 \\
@@ -266,8 +268,8 @@ pipeline {
                         -e EUREKA_INSTANCE=shipping-service-container \\
                         jacoboossag/shipping-service:${IMAGE_TAG}
 
-                    until curl -s http://localhost:8600/shipping-service/actuator/health | grep '"status":"UP"' > /dev/null; do
-                        echo "⌛ Esperando SHIPPING..."
+                    until [ "$(curl -s http://localhost:8600/shipping-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                        echo "⌛ Esperando SHIPPING-SERVICE..."
                         sleep 5
                     done
 
@@ -280,8 +282,8 @@ pipeline {
                         -e EUREKA_INSTANCE=user-service-container \\
                         jacoboossag/user-service:${IMAGE_TAG}
 
-                    until curl -s http://localhost:8700/user-service/actuator/health | grep '"status":"UP"' > /dev/null; do
-                        echo "⌛ Esperando USER..."
+                    until [ "$(curl -s http://localhost:8700/user-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                        echo "⌛ Esperando USER-SERVICE..."
                         sleep 5
                     done
 
@@ -294,8 +296,8 @@ pipeline {
                         -e EUREKA_INSTANCE=favourite-service-container \\
                         jacoboossag/favourite-service:${IMAGE_TAG}
 
-                    until curl -s http://localhost:8800/favourite-service/actuator/health | grep '"status":"UP"' > /dev/null; do
-                        echo "⌛ Esperando FAVOURITE..."
+                    until [ "$(curl -s http://localhost:8800/favourite-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                        echo "⌛ Esperando FAVOURITE-SERVICE..."
                         sleep 5
                     done
 

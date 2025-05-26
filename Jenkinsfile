@@ -224,7 +224,7 @@ pipeline {
                         -e EUREKA_INSTANCE=order-service-container \\
                         jacoboossag/order-service:${IMAGE_TAG}
 
-                    until curl -s http://localhost:8300/actuator/health | grep '"status":"UP"' > /dev/null; do
+                    until curl -s http://localhost:8300/order-service/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando ORDER-SERVICE..."
                         sleep 5
                     done
@@ -238,7 +238,7 @@ pipeline {
                         -e EUREKA_INSTANCE=payment-service-container \\
                         jacoboossag/payment-service:${IMAGE_TAG}
 
-                    until curl -s http://localhost:8400/actuator/health | grep '"status":"UP"' > /dev/null; do
+                    until curl -s http://localhost:8400/payment-service/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando PAYMENT..."
                         sleep 5
                     done
@@ -252,7 +252,7 @@ pipeline {
                         -e EUREKA_INSTANCE=product-service-container \\
                         jacoboossag/product-service:${IMAGE_TAG}
 
-                    until curl -s http://localhost:8500/actuator/health | grep '"status":"UP"' > /dev/null; do
+                    until curl -s http://localhost:8500/product-service/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando PRODUCT..."
                         sleep 5
                     done
@@ -266,7 +266,7 @@ pipeline {
                         -e EUREKA_INSTANCE=shipping-service-container \\
                         jacoboossag/shipping-service:${IMAGE_TAG}
 
-                    until curl -s http://localhost:8600/actuator/health | grep '"status":"UP"' > /dev/null; do
+                    until curl -s http://localhost:8600/shipping-service/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando SHIPPING..."
                         sleep 5
                     done
@@ -280,7 +280,7 @@ pipeline {
                         -e EUREKA_INSTANCE=user-service-container \\
                         jacoboossag/user-service:${IMAGE_TAG}
 
-                    until curl -s http://localhost:8700/actuator/health | grep '"status":"UP"' > /dev/null; do
+                    until curl -s http://localhost:8700/user-service/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando USER..."
                         sleep 5
                     done
@@ -294,7 +294,7 @@ pipeline {
                         -e EUREKA_INSTANCE=favourite-service-container \\
                         jacoboossag/favourite-service:${IMAGE_TAG}
 
-                    until curl -s http://localhost:8800/actuator/health | grep '"status":"UP"' > /dev/null; do
+                    until curl -s http://localhost:8800/favourite-service/actuator/health | grep '"status":"UP"' > /dev/null; do
                         echo "⌛ Esperando FAVOURITE..."
                         sleep 5
                     done

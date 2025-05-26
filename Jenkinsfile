@@ -320,7 +320,7 @@ pipeline {
                     echo "🎯 Ejecutando prueba de carga desde Locust..."
                     
                     docker run --rm --network ecommerce-test jacoboossag/locust:${IMAGE_TAG} \\
-                    -f /locust/locustfile.py \\
+                    -f locustfile.py \\
                     --host http://favourite-service:8800 \\
                     --headless -u 10 -r 2 -t 1m
                     

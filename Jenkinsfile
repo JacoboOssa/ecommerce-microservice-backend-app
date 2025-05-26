@@ -190,10 +190,7 @@ pipeline {
                     docker network create ecommerce-test || true
                     echo "🚀 Levantando ZIPKIN..."
                     docker run -d --name zipkin --network ecommerce-test -p 9411:9411 openzipkin/zipkin
-                    until curl -s http://zipkin:9411/health | grep '"status":"UP"' > /dev/null; do
-                        echo "⌛ Esperando ZIPKIN..."
-                        sleep 3
-                    done
+    
 
                     echo "🚀 Levantando EUREKA..."
                     docker run -d --name eureka --network ecommerce-test -p 8761:8761 -e SPRING_PROFILES_ACTIVE=dev jacoboossag/service-discovery:${IMAGE_TAG}

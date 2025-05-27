@@ -333,7 +333,7 @@ pipeline {
 
                     echo "🚀 Levantando Locust para favourite-service..."
 
-                    docker run --rm --network ecommerce-test 
+                    docker run --rm --network ecommerce-test \\
                     jacoboossag/locust:${IMAGE_TAG} \\
                     -f test/favourite-service/locustfile.py \\
                     --host http://favourite-service-container:8800 \\

@@ -316,7 +316,6 @@ pipeline {
                     echo "🚀 Levantando Locust para order-service..."
 
                     docker run --rm --network ecommerce-test \\
-                    -v "$(pwd)/locust-results:/app" \\
                     jacoboossag/locust:${IMAGE_TAG} \\
                     -f test/order-service/locustfile.py \\
                     --host http://order-service-container:8300 \\
@@ -326,7 +325,6 @@ pipeline {
                     echo "🚀 Levantando Locust para payment-service..."
 
                     docker run --rm --network ecommerce-test \\
-                    -v "$(pwd)/locust-results:/app" \\
                     jacoboossag/locust:${IMAGE_TAG} \\
                     -f test/payment-service/locustfile.py \\
                     --host http://payment-service-container:8400 \\
@@ -336,7 +334,6 @@ pipeline {
                     echo "🚀 Levantando Locust para favourite-service..."
 
                     docker run --rm --network ecommerce-test 
-                    -v "$(pwd)/locust-results:/app" \\
                     jacoboossag/locust:${IMAGE_TAG} \\
                     -f test/favourite-service/locustfile.py \\
                     --host http://favourite-service-container:8800 \\
@@ -357,7 +354,6 @@ pipeline {
                     echo "🔥 Levantando Locust para prueba de estrés..."
 
                     docker run --rm --network ecommerce-test \\
-                    -v "$(pwd)/locust-results:/app" \\
                     jacoboossag/locust:${IMAGE_TAG} \\
                     -f test/order-service/locustfile.py \\
                     --host http://order-service-container:8300 \\
@@ -372,7 +368,6 @@ pipeline {
                     --csv payment-service-stress
 
                     docker run --rm --network ecommerce-test \\
-                    -v "$(pwd)/locust-results:/app" \\   
                     jacoboossag/locust:${IMAGE_TAG} \\
                     -f test/favourite-service/locustfile.py \\
                     --host http://favourite-service-container:8800 \\

@@ -90,9 +90,9 @@ pipeline {
                     script {
                         ['user-service', 'product-service'].each {
                             sh "mvn verify -pl ${it}"
+                        }
                     }
                 }
-            }
         }
 
         // Debo probar esto solo cuando vaya de stage a master
@@ -402,6 +402,19 @@ pipeline {
                 script {
                     echo '👻👻👻👻👻👻'
                 }
+            }
+        }
+
+        stage('Generate and Archive Release Notes') {
+            when {
+                branch 'master'
+            }
+            steps {
+                sh '''
+                echo "📝 Generando Release Notes con convco..."
+                convco changelog > RELEASE_NOTES.md
+                '''
+                archiveArtifacts artifacts: 'RELEASE_NOTES.md', fingerprint: true
             }
         }
     }

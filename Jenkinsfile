@@ -17,37 +17,27 @@ pipeline {
         stage('Init') {
             steps {
                 script {
-                    if (env.BRANCH_NAME == 'master') {
-                        env.SPRING_PROFILE = 'prod'
-                        env.IMAGE_TAG = 'prod'
-                        env.DEPLOYMENT_SUFFIX = '-prod'
+                    def profileConfig = [
+                        master : ['prod', '-prod'],
+                        release: ['stage', '-stage']
+                    ]
+                    def config = profileConfig.get(env.BRANCH_NAME, ['dev', '-dev'])
 
-                    } else if (env.BRANCH_NAME == 'release') {
-                        env.SPRING_PROFILE = 'stage'
-                        env.IMAGE_TAG = 'stage'
-                        env.DEPLOYMENT_SUFFIX = '-stage'
+                    env.SPRING_PROFILES_ACTIVE = config[0]
+                    env.IMAGE_TAG = config[0]
+                    env.DEPLOYMENT_SUFFIX = config[1]
 
-                    } else {
-                        env.SPRING_PROFILE = 'dev'
-                        env.IMAGE_TAG = 'dev'
-                        env.DEPLOYMENT_SUFFIX = '-dev'
-                    }
-
-                    echo "Branch: ${env.BRANCH_NAME}"
-                    echo "Namespace: ${env.K8S_NAMESPACE}"
-                    echo "Spring profile: ${env.SPRING_PROFILE}"
-                    echo "Image tag: ${env.IMAGE_TAG}"
-                    echo "Deployment suffix: ${env.DEPLOYMENT_SUFFIX}"
+                    echo "📦 Branch: ${env.BRANCH_NAME}"
+                    echo "🌱 Spring profile: ${env.SPRING_PROFILES_ACTIVE}"
+                    echo "🏷️ Image tag: ${env.IMAGE_TAG}"
+                    echo "📂 Deployment suffix: ${env.DEPLOYMENT_SUFFIX}"
                 }
             }
         }
 
         stage('Ensure Namespace') {
             steps {
-                script {
-                    def ns = env.K8S_NAMESPACE
-                    sh "kubectl get namespace ${ns} || kubectl create namespace ${ns}"
-                }
+                sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
             }
         }
 
@@ -63,84 +53,67 @@ pipeline {
                 sh 'mvn -version'
                 sh 'docker --version'
                 sh 'kubectl config current-context'
-
             }
         }
         // Debo quitar el paralell
         //Debo cambiar a que solo se ejecuten cuando se pushea a dev (PR a dev - desde feature/*)
         //Deberia construir dependiendo de la rama, esto se haria en el dockerfile solo le paso el perfil a esta env SPRING_PROFILES_ACTIVE
-        // stage('Unit Tests') {
-        //     parallel {
-        //         stage('Unit Tests') {
-        //             when {
-        //                 anyOf {
-        //                     branch 'dev'
-        //                     branch 'master'
-        //                     branch 'release'
-        //                     expression { env.BRANCH_NAME.startsWith('feature/') }
-        //                 }
-        //             }
-        //             steps {
-        //                 script {
-        //                     echo "🔍 Running Unit Tests for ${env.BRANCH_NAME}"
-        //                     sh "mvn test -pl product-service"
-        //                     sh "mvn test -pl user-service"
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+        stage('Unit Tests') {
+                when {
+                    anyOf {
+                        branch 'dev'; branch 'master'; branch 'release'
+                        expression { env.BRANCH_NAME.startsWith('feature/') }
+                    }
+                }
+            steps {
+                script {
+                    ['user-service', 'product-service'].each {
+                        sh "mvn test -pl ${it}"
+                    }
+                }
+            }
+        }
 
         // //Debo probar esto solo cuando vaya de stage a master
-        // stage('Integration Tests') {
-        //     parallel {
-        //         stage('Integration Tests') {
-        //             when {
-        //                 anyOf {
-        //                     branch 'master'
-        //                     expression { env.BRANCH_NAME.startsWith('feature/') }
-        //                     allOf {
-        //                         not { branch 'master' }
-        //                         not { branch 'release' }
-        //                     }
-        //                 }
-        //             }
-        //             steps {
-        //                 script {
-        //                     echo "🧪 Running Integration Tests for ${env.BRANCH_NAME}"
-        //                     sh "mvn verify -pl product-service"
-        //                     sh "mvn verify -pl user-service"
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
-
-
+        stage('Integration Tests') {
+                when {
+                    anyOf {
+                        branch 'master'
+                        expression { env.BRANCH_NAME.startsWith('feature/') }
+                        allOf {
+                            not { branch 'master' }
+                            not { branch 'release' }
+                        }
+                    }
+                }
+                steps {
+                    script {
+                        ['user-service', 'product-service'].each {
+                            sh "mvn verify -pl ${it}"
+                    }
+                }
+            }
+        }
 
         // Debo probar esto solo cuando vaya de stage a master
-        // stage('E2E Tests') {
-        //             parallel {
-        //                 stage('E2E Tests') {
-        //                     when {
-        //                         anyOf {
-        //                             branch 'master'
-        //                             expression { env.BRANCH_NAME.startsWith('feature/') }
-        //                             allOf {
-        //                                 not { branch 'master' }
-        //                                 not { branch 'release' }
-        //                             }
-        //                         }
-        //                     }
-        //                     steps {
-        //                         script {
-        //                             echo "🧪 Running Integration Tests for ${env.BRANCH_NAME}"
-        //                             sh "mvn verify -pl e2e-tests"
-        //                         }
-        //                     }
-        //                 }
-        //             }
-        //         }
+        stage('E2E Tests') {
+            when {
+                anyOf {
+                    branch 'master'
+                    expression { env.BRANCH_NAME.startsWith('feature/') }
+                    allOf {
+                        not { branch 'master' }
+                        not { branch 'release' }
+                    }
+                }
+            }
+            steps {
+                script {
+                    echo "🧪 Running Integration Tests for ${env.BRANCH_NAME}"
+                    sh 'mvn verify -pl e2e-tests'
+                }
+            }
+        }
 
         //Debo agregar el stage para locust, deberia probar con las imagenes desplegas en kubernetes, hacer
         //el deploy de las imagenes en el cluster y luego ejecutar locust, probar, tener una metrica que pase
@@ -154,7 +127,7 @@ pipeline {
                 }
             }
             steps {
-                sh "mvn clean package -DskipTests"
+                sh 'mvn clean package -DskipTests'
             }
         }
 
@@ -182,7 +155,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Levantar contenedores para pruebas') {
             steps {
                 script {
@@ -229,7 +202,6 @@ pipeline {
                         sleep 5
                     done
 
-
                     echo "🚀 Levantando PAYMENT..."
                     docker run -d --name payment-service-container --network ecommerce-test -p 8400:8400 \\
                         -e SPRING_PROFILES_ACTIVE=dev \\
@@ -238,7 +210,7 @@ pipeline {
                         -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
                         -e EUREKA_INSTANCE=payment-service-container \\
                         jacoboossag/payment-service:${IMAGE_TAG}
-                    
+
                     until [ "$(curl -s http://localhost:8400/payment-service/actuator/health | jq -r '.status')" = "UP" ]; do
                         echo "⌛ Esperando PAYMENT-SERVICE..."
                         sleep 5
@@ -257,7 +229,6 @@ pipeline {
                         echo "⌛ Esperando PRODUCT-SERVICE..."
                         sleep 5
                     done
-
 
                     echo "🚀 Levantando SHIPPING..."
                     docker run -d --name shipping-service-container --network ecommerce-test -p 8600:8600 \\
@@ -307,7 +278,6 @@ pipeline {
             }
         }
 
-
         stage('Run Load Tests with Locust') {
             when { branch 'master' }
             steps {
@@ -345,7 +315,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Run Stress Tests with Locust') {
             when { branch 'master' }
             steps {
@@ -380,8 +350,6 @@ pipeline {
             }
         }
 
-
-        
         stage('Detener y eliminar contenedores') {
             steps {
                 script {
@@ -405,40 +373,37 @@ pipeline {
             }
         }
 
+        stage('Deploy Common Config') {
+            when { branch 'master' }
+            steps {
+                sh "kubectl apply -f k8s/common-config.yaml -n ${K8S_NAMESPACE}"
+            }
+        }
 
+        stage('Deploy Core Services') {
+            when { branch 'master' }
+            steps {
+                sh "kubectl apply -f k8s/zipkin/ -n ${K8S_NAMESPACE}"
+                sh "kubectl rollout status deployment/zipkin -n ${K8S_NAMESPACE} --timeout=200s"
 
+                sh "kubectl apply -f k8s/service-discovery/ -n ${K8S_NAMESPACE}"
+                sh "kubectl set image deployment/service-discovery service-discovery=${DOCKERHUB_USER}/service-discovery:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
+                sh "kubectl rollout status deployment/service-discovery -n ${K8S_NAMESPACE} --timeout=200s"
 
-        // stage('Deploy Common Config') {
-        //     when { branch 'master' }
-        //     steps {
-        //         sh "kubectl apply -f k8s/common-config.yaml -n ${K8S_NAMESPACE}"
-        //     }
-        // }
+                sh "kubectl apply -f k8s/cloud-config/ -n ${K8S_NAMESPACE}"
+                sh "kubectl set image deployment/cloud-config cloud-config=${DOCKERHUB_USER}/cloud-config:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
+                sh "kubectl rollout status deployment/cloud-config -n ${K8S_NAMESPACE} --timeout=300s"
+            }
+        }
 
-        // stage('Deploy Core Services') {
-        //     when { branch 'master' }
-        //     steps {
-        //         sh "kubectl apply -f k8s/zipkin/ -n ${K8S_NAMESPACE}"
-        //         sh "kubectl rollout status deployment/zipkin -n ${K8S_NAMESPACE} --timeout=200s"
-
-        //         sh "kubectl apply -f k8s/service-discovery/ -n ${K8S_NAMESPACE}"
-        //         sh "kubectl set image deployment/service-discovery service-discovery=${DOCKERHUB_USER}/service-discovery:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
-        //         sh "kubectl rollout status deployment/service-discovery -n ${K8S_NAMESPACE} --timeout=200s"
-
-        //         sh "kubectl apply -f k8s/cloud-config/ -n ${K8S_NAMESPACE}"
-        //         sh "kubectl set image deployment/cloud-config cloud-config=${DOCKERHUB_USER}/cloud-config:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
-        //         sh "kubectl rollout status deployment/cloud-config -n ${K8S_NAMESPACE} --timeout=300s"
-        //     }
-        // }
-
-        // stage('Deploy Microservices') {
-        //     when { branch 'master' }
-        //     steps {
-        //         script {
-        //             echo '👻👻👻👻👻👻'
-        //         }
-        //     }
-        // }
+        stage('Deploy Microservices') {
+            when { branch 'master' }
+            steps {
+                script {
+                    echo '👻👻👻👻👻👻'
+                }
+            }
+        }
     }
 
     post {
@@ -448,26 +413,26 @@ pipeline {
                 echo "📊 Environment: ${env.SPRING_PROFILE}"
 
                 if (env.BRANCH_NAME == 'master') {
-                    echo "🚀 Production deployment completed successfully!"
+                    echo '🚀 Production deployment completed successfully!'
                 } else if (env.BRANCH_NAME == 'release') {
-                    echo "🎯 Staging deployment completed successfully!"
+                    echo '🎯 Staging deployment completed successfully!'
                 } else {
-                    echo "🔧 Development tests completed successfully!"
+                    echo '🔧 Development tests completed successfully!'
                 }
             }
         }
         failure {
             script {
                 echo "❌ Pipeline failed for ${env.BRANCH_NAME} branch."
-                echo "🔍 Check the logs for details."
-                echo "📧 Notify the development team about the failure."
+                echo '🔍 Check the logs for details.'
+                echo '📧 Notify the development team about the failure.'
             }
         }
         unstable {
             script {
                 echo "⚠️ Pipeline completed with warnings for ${env.BRANCH_NAME} branch."
-                echo "🔍 Some tests may have failed. Review test reports."
+                echo '🔍 Some tests may have failed. Review test reports.'
             }
         }
-    }    
+    }
 }

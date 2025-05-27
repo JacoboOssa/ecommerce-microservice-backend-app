@@ -4,6 +4,7 @@ import random
 class PaymentServiceUser(HttpUser):
     wait_time = between(1, 3)
     payment_ids = [1, 2, 3]
+    order_ids = [1, 2, 3, 4]
 
     @task
     def get_all_favourites(self):
@@ -27,7 +28,7 @@ class PaymentServiceUser(HttpUser):
                 
                 
     def get_order_id(self):
-        return random.randint(1, 1000)
+        return random.choice(self.order_ids)
     
     @task
     def should_save_payment(self):

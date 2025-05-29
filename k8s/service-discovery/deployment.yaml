@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: service-discovery
-        image: jacoboossag/service-discovery:latest
+        image: jacoboossag/service-discovery:prod
         ports:
         - containerPort: 8761
 #        resources:

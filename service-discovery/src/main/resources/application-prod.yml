@@ -8,6 +8,11 @@ management:
       exposure:
         include: "*"
 
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+
 logging:
   file:
     name: src/main/resources/script/prod_log.log

@@ -49,7 +49,7 @@ public class E2ESuite {
                     .withExposedPorts(9411)
                     .waitingFor(Wait.forHttp("/").forStatusCode(200));
 
-            serviceDiscoveryContainer = new GenericContainer<>("jacoboossag/service-discovery:stage")
+            serviceDiscoveryContainer = new GenericContainer<>("selimhorri/service-discovery-ecommerce-boot:0.1.0")
                     .withNetwork(network)
                     .withNetworkAliases("service-discovery-container")
                     .withExposedPorts(8761)

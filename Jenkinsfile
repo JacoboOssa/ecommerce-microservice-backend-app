@@ -455,7 +455,7 @@ pipeline {
             when { branch 'master' }
             steps {
                 script {
-                    def appServices = ['user-service', 'product-service', 'order-service','favourite-service','payment-service','shipping-service']
+                    def appServices = ['user-service', 'product-service', 'order-service','favourite-service','payment-service']
 
                     for (svc in appServices) {
                         def image = "${DOCKERHUB_USER}/${svc}:${IMAGE_TAG}"

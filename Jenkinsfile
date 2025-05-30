@@ -440,10 +440,20 @@ pipeline {
             when { branch 'master' }
             steps {
                 script {
-                    echo '👻👻👻👻👻👻'
+                    def appServices = ['user-service', 'product-service', 'order-service']
+
+                    for (svc in appServices) {
+                        def image = "${DOCKERHUB_USER}/${svc}:${IMAGE_TAG}"
+
+                        sh "kubectl apply -f k8s/${svc}/ -n ${K8S_NAMESPACE}"
+                        sh "kubectl set image deployment/${svc} ${svc}=${image} -n ${K8S_NAMESPACE}"
+                        sh "kubectl set env deployment/${svc} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+                        sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=200s"
+                    }
                 }
             }
         }
+
 
         stage('Generate and Archive Release Notes') {
             when {

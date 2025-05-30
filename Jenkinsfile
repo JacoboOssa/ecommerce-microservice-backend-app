@@ -496,7 +496,7 @@ pipeline {
                     echo '🎯 Staging deployment completed successfully!'
                     publishHTML([
                         reportDir: 'locust-reports',
-                        reportFiles: 'order-service-report.html, payment-service-report.html, favourite-service-report.html',
+                        reportFiles: 'order-service-report.html, payment-service-report.html, favourite-service-report.html, order-service-stress-report.html, payment-service-stress-report.html, favourite-service-stress-report.html',
                         reportName: 'Locust Stress Test Reports',
                         keepAll: true
                     ])

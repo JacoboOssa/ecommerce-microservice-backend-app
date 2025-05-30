@@ -317,26 +317,32 @@ pipeline {
                             echo "🔥 Levantando Locust para prueba de estrés..."
 
                             docker run --rm --network ecommerce-test \\
-
+                            -v $PWD/locust-reports:/mnt/locust \\
                             jacoboossag/locust:${IMAGE_TAG} \\
                             -f test/order-service/locustfile.py \\
                             --host http://order-service-container:8300 \\
                             --headless -u 50 -r 5 -t 1m \\
-                            --csv order-service-stress
+                            --only-summary \\
+                            --html /mnt/locust/order-service-stress-report.html
 
                             docker run --rm --network ecommerce-test \\
+                            -v $PWD/locust-reports:/mnt/locust \\
                             jacoboossag/locust:${IMAGE_TAG} \\
                             -f test/payment-service/locustfile.py \\
                             --host http://payment-service-container:8400 \\
                             --headless -u 50 -r 5 -t 1m \\
-                            --csv payment-service-stress
+                            --only-summary \\
+                            --html /mnt/locust/payment-service-stress-report.html
 
                             docker run --rm --network ecommerce-test \\
+                            -v $PWD/locust-reports:/mnt/locust \\
                             jacoboossag/locust:${IMAGE_TAG} \\
                             -f test/favourite-service/locustfile.py \\
                             --host http://favourite-service-container:8800 \\
                             --headless -u 50 -r 5 -t 1m \\
-                            --csv favourite-service-stress
+                            --only-summary \\
+                            --html /mnt/locust/favourite-service-stress-report.html
+
 
                             echo "✅ Pruebas de estrés completadas"
                             '''

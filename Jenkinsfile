@@ -116,7 +116,7 @@ pipeline {
                                 sh "mvn test -pl ${it}"
                             }
                         }
-                        junit "**/${it}/target/surefire-reports/*.xml"
+                        junit '**/target/surefire-reports/*.xml'
                     }
                 }
 

@@ -114,9 +114,9 @@ pipeline {
                         script {
                             ['user-service', 'product-service'].each {
                                 sh "mvn test -pl ${it}"
-                                junit "**/${it}/target/surefire-reports/*.xml"
                             }
                         }
+                        junit "**/${it}/target/surefire-reports/*.xml"
                     }
                 }
 
@@ -128,6 +128,7 @@ pipeline {
                                     sh "mvn verify -pl ${it}"
                                 }
                             }
+                            junit '**/target/failsafe-reports/TEST-*.xml'
                         }
                 }
 

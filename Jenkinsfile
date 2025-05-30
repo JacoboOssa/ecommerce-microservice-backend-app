@@ -145,7 +145,6 @@ pipeline {
                     steps {
                         script {
                             sh '''
-                            sleep 60
                             docker network create ecommerce-test || true
                             echo "🚀 Levantando ZIPKIN..."
                             docker run -d --name zipkin-container --network ecommerce-test -p 9411:9411 openzipkin/zipkin

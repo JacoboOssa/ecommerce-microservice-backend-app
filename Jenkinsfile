@@ -139,6 +139,7 @@ pipeline {
                             echo "🧪 Running Integration Tests for ${env.BRANCH_NAME}"
                             sh 'mvn verify -pl e2e-tests'
                         }
+                        junit 'e2e-tests/target/failsafe-reports/*.xml'
                     }
                 }
 

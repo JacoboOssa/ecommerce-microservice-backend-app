@@ -114,6 +114,7 @@ pipeline {
                         script {
                             ['user-service', 'product-service'].each {
                                 sh "mvn test -pl ${it}"
+                                junit "**/${it}/target/surefire-reports/*.xml"
                             }
                         }
                     }

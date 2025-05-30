@@ -293,8 +293,9 @@ pipeline {
                             --html /mnt/locust/payment-service-report.html
 
                             echo "🚀 Levantando Locust para favourite-service..."
-                            -v $PWD/locust-reports:/mnt/locust \\
+
                             docker run --rm --network ecommerce-test \\
+                            -v $PWD/locust-reports:/mnt/locust \\
                             jacoboossag/locust:${IMAGE_TAG} \\
                             -f test/favourite-service/locustfile.py \\
                             --host http://favourite-service-container:8800 \\

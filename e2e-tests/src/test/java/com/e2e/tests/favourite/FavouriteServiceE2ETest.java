@@ -8,16 +8,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(classes = E2ESuite.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
 public class FavouriteServiceE2ETest extends E2ESuite {
-    private static final String EXPECTED_BACKEND_DATE_TIME_FORMAT = "dd-MM-yyyy__HH:mm:ss:SSSSSS";
-
     @Autowired
     private TestRestFacade restFacade;
 

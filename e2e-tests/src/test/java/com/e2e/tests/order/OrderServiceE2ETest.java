@@ -8,10 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -20,16 +16,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class OrderServiceE2ETest extends E2ESuite {
 
     @Autowired
-    private TestRestFacade restFacade; // Autowire your facade
+    private TestRestFacade restFacade;
 
-    @Value("${order.service.url}") // This property is set by E2ESuite.Initializer
-    private String productServiceUrl;
+    @Value("${order.service.url}")
+    private String orderServiceUrl;
 
     @Test
     void shouldGetOrderById() {
         int orderId = 2;
         ResponseEntity<String> response = restFacade.get(
-                productServiceUrl + "/order-service/api/orders/" + orderId,
+                orderServiceUrl + "/order-service/api/orders/" + orderId,
                 String.class);
         System.out.println("Response: " + response.getBody());
         System.out.println("Status Code: " + response.getStatusCode());

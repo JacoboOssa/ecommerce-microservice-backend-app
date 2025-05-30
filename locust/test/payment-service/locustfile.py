@@ -7,7 +7,7 @@ class PaymentServiceUser(HttpUser):
     order_ids = [1, 2, 3, 4]
 
     @task
-    def get_all_favourites(self):
+    def get_all_payments(self):
         path = "/payment-service/api/payments"
         with self.client.get(path, catch_response=True, name="/api/payments") as response:
             if response.status_code >= 200 and response.status_code < 300:

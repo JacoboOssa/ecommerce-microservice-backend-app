@@ -9,6 +9,6 @@ WORKDIR /home/app
 #COPY product-service/ .
 COPY target/product-service-v0.1.0.jar product-service.jar
 EXPOSE 8500
-ENTRYPOINT ["java", "-jar", "product-service.jar"]
+ENTRYPOINT ["java","-Dspring.profiles.active=${SPRING_PROFILES_ACTIVE}", "-jar", "product-service.jar"]
 
 

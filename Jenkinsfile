@@ -57,257 +57,6 @@ pipeline {
             }
         }
 
-        stage('Unit Tests') {
-                when { branch 'dev' }
-            steps {
-                script {
-                    ['user-service', 'product-service'].each {
-                        sh "mvn test -pl ${it}"
-                    }
-                }
-            }
-        }
-
-        stage('Integration Tests') {
-            when { branch 'stage' }
-                steps {
-                    script {
-                        ['user-service', 'product-service'].each {
-                            sh "mvn verify -pl ${it}"
-                        }
-                    }
-                }
-        }
-
-        stage('E2E Tests') {
-            when { branch 'stage' }
-            steps {
-                script {
-                    echo "🧪 Running Integration Tests for ${env.BRANCH_NAME}"
-                    sh 'mvn verify -pl e2e-tests'
-                }
-            }
-        }
-
-      stage('Levantar contenedores para pruebas') {
-            when { branch 'stage' }
-            steps {
-                script {
-                    sh '''
-                    docker network create ecommerce-test || true
-                    echo "🚀 Levantando ZIPKIN..."
-                    docker run -d --name zipkin-container --network ecommerce-test -p 9411:9411 openzipkin/zipkin
-
-                    echo "🚀 Levantando EUREKA..."
-                    docker run -d --name service-discovery-container --network ecommerce-test -p 8761:8761 \\
-                        -e SPRING_PROFILES_ACTIVE=dev \\
-                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
-                        jacoboossag/service-discovery:${IMAGE_TAG}
-
-                    until curl -s http://localhost:8761/actuator/health | grep '"status":"UP"' > /dev/null; do
-                        echo "⌛ Esperando EUREKA..."
-                        sleep 5
-                    done
-
-                    echo "🚀 Levantando CLOUD-CONFIG..."
-                    docker run -d --name cloud-config-container --network ecommerce-test -p 9296:9296 \\
-                        -e SPRING_PROFILES_ACTIVE=dev \\
-                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
-                        -e EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-discovery-container:8761/eureka/ \\
-                        -e EUREKA_INSTANCE=cloud-config-container \\
-                        jacoboossag/cloud-config:${IMAGE_TAG}
-
-                    until curl -s http://localhost:9296/actuator/health | grep '"status":"UP"' > /dev/null; do
-                        echo "⌛ Esperando CLOUD-CONFIG..."
-                        sleep 5
-                    done
-
-                    echo "🚀 Levantando ORDER-SERVICE..."
-                    docker run -d --name order-service-container --network ecommerce-test -p 8300:8300 \\
-                        -e SPRING_PROFILES_ACTIVE=dev \\
-                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
-                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
-                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
-                        -e EUREKA_INSTANCE=order-service-container \\
-                        jacoboossag/order-service:${IMAGE_TAG}
-
-                    until [ "$(curl -s http://localhost:8300/order-service/actuator/health | jq -r '.status')" = "UP" ]; do
-                        echo "⌛ Esperando ORDER-SERVICE..."
-                        sleep 5
-                    done
-
-                    echo "🚀 Levantando PAYMENT..."
-                    docker run -d --name payment-service-container --network ecommerce-test -p 8400:8400 \\
-                        -e SPRING_PROFILES_ACTIVE=dev \\
-                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
-                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
-                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
-                        -e EUREKA_INSTANCE=payment-service-container \\
-                        jacoboossag/payment-service:${IMAGE_TAG}
-
-                    until [ "$(curl -s http://localhost:8400/payment-service/actuator/health | jq -r '.status')" = "UP" ]; do
-                        echo "⌛ Esperando PAYMENT-SERVICE..."
-                        sleep 5
-                    done
-
-                    echo "🚀 Levantando PRODUCT..."
-                    docker run -d --name product-service-container --network ecommerce-test -p 8500:8500 \\
-                        -e SPRING_PROFILES_ACTIVE=dev \\
-                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
-                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
-                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
-                        -e EUREKA_INSTANCE=product-service-container \\
-                        jacoboossag/product-service:${IMAGE_TAG}
-
-                    until [ "$(curl -s http://localhost:8500/product-service/actuator/health | jq -r '.status')" = "UP" ]; do
-                        echo "⌛ Esperando PRODUCT-SERVICE..."
-                        sleep 5
-                    done
-
-                    echo "🚀 Levantando SHIPPING..."
-                    docker run -d --name shipping-service-container --network ecommerce-test -p 8600:8600 \\
-                        -e SPRING_PROFILES_ACTIVE=dev \\
-                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
-                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
-                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
-                        -e EUREKA_INSTANCE=shipping-service-container \\
-                        jacoboossag/shipping-service:${IMAGE_TAG}
-
-                    until [ "$(curl -s http://localhost:8600/shipping-service/actuator/health | jq -r '.status')" = "UP" ]; do
-                        echo "⌛ Esperando SHIPPING-SERVICE..."
-                        sleep 5
-                    done
-
-                    echo "🚀 Levantando USER..."
-                    docker run -d --name user-service-container --network ecommerce-test -p 8700:8700 \\
-                        -e SPRING_PROFILES_ACTIVE=dev \\
-                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
-                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
-                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
-                        -e EUREKA_INSTANCE=user-service-container \\
-                        jacoboossag/user-service:${IMAGE_TAG}
-
-                    until [ "$(curl -s http://localhost:8700/user-service/actuator/health | jq -r '.status')" = "UP" ]; do
-                        echo "⌛ Esperando USER-SERVICE..."
-                        sleep 5
-                    done
-
-                    echo "🚀 Levantando FAVOURITE..."
-                    docker run -d --name favourite-service-container --network ecommerce-test -p 8800:8800 \\
-                        -e SPRING_PROFILES_ACTIVE=dev \\
-                        -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
-                        -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
-                        -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
-                        -e EUREKA_INSTANCE=favourite-service-container \\
-                        jacoboossag/favourite-service:${IMAGE_TAG}
-
-                    until [ "$(curl -s http://localhost:8800/favourite-service/actuator/health | jq -r '.status')" = "UP" ]; do
-                        echo "⌛ Esperando FAVOURITE-SERVICE..."
-                        sleep 5
-                    done
-
-                    echo "✅ Todos los contenedores están arriba y saludables."
-                    '''
-                }
-            }
-        }
-
-        stage('Run Load Tests with Locust') {
-            when { branch 'stage' }
-            steps {
-                script {
-                    sh '''
-                    echo "🚀 Levantando Locust para order-service..."
-
-                    docker run --rm --network ecommerce-test \\
-                    jacoboossag/locust:${IMAGE_TAG} \\
-                    -f test/order-service/locustfile.py \\
-                    --host http://order-service-container:8300 \\
-                    --headless -u 10 -r 2 -t 1m \\
-                    --csv order-service-stats --csv-full-history
-
-                    echo "🚀 Levantando Locust para payment-service..."
-
-                    docker run --rm --network ecommerce-test \\
-                    jacoboossag/locust:${IMAGE_TAG} \\
-                    -f test/payment-service/locustfile.py \\
-                    --host http://payment-service-container:8400 \\
-                    --headless -u 10 -r 1 -t 1m \\
-                    --csv payment-service-stats --csv-full-history
-
-                    echo "🚀 Levantando Locust para favourite-service..."
-
-                    docker run --rm --network ecommerce-test \\
-                    jacoboossag/locust:${IMAGE_TAG} \\
-                    -f test/favourite-service/locustfile.py \\
-                    --host http://favourite-service-container:8800 \\
-                    --headless -u 10 -r 2 -t 1m \\
-                    --csv favourite-service-stats --csv-full-history
-
-                    echo "✅ Pruebas completadas"
-                    '''
-                }
-            }
-        }
-
-        stage('Run Stress Tests with Locust') {
-            when { branch 'stage' }
-            steps {
-                script {
-                    sh '''
-                    echo "🔥 Levantando Locust para prueba de estrés..."
-
-                    docker run --rm --network ecommerce-test \\
-                    jacoboossag/locust:${IMAGE_TAG} \\
-                    -f test/order-service/locustfile.py \\
-                    --host http://order-service-container:8300 \\
-                    --headless -u 50 -r 5 -t 1m \\
-                    --csv order-service-stress
-
-                    docker run --rm --network ecommerce-test \\
-                    jacoboossag/locust:${IMAGE_TAG} \\
-                    -f test/payment-service/locustfile.py \\
-                    --host http://payment-service-container:8400 \\
-                    --headless -u 50 -r 5 -t 1m \\
-                    --csv payment-service-stress
-
-                    docker run --rm --network ecommerce-test \\
-                    jacoboossag/locust:${IMAGE_TAG} \\
-                    -f test/favourite-service/locustfile.py \\
-                    --host http://favourite-service-container:8800 \\
-                    --headless -u 50 -r 5 -t 1m \\
-                    --csv favourite-service-stress
-
-                    echo "✅ Pruebas de estrés completadas"
-                    '''
-                }
-            }
-        }
-
-        stage('Detener y eliminar contenedores') {
-            when { branch 'stage' }
-            steps {
-                script {
-                    sh '''
-                    echo "🛑 Deteniendo y eliminando contenedores..."
-
-                    docker rm -f locust || true
-                    docker rm -f favourite-service-container || true
-                    docker rm -f user-service-container || true
-                    docker rm -f shipping-service-container || true
-                    docker rm -f product-service-container || true
-                    docker rm -f payment-service-container || true
-                    docker rm -f order-service-container || true
-                    docker rm -f cloud-config-container || true
-                    docker rm -f service-discovery-container || true
-                    docker rm -f zipkin-container || true
-
-                    echo "🧹 Todos los contenedores eliminados"
-                '''
-                }
-            }
-        }
-
         //Stage gral
         stage('Build Services') {
             when {
@@ -358,6 +107,257 @@ pipeline {
                 }
             }
         }
+
+                stage('Unit Tests') {
+                        when { branch 'dev' }
+                    steps {
+                        script {
+                            ['user-service', 'product-service'].each {
+                                sh "mvn test -pl ${it}"
+                            }
+                        }
+                    }
+                }
+
+                stage('Integration Tests') {
+                    when { branch 'stage' }
+                        steps {
+                            script {
+                                ['user-service', 'product-service'].each {
+                                    sh "mvn verify -pl ${it}"
+                                }
+                            }
+                        }
+                }
+
+                stage('E2E Tests') {
+                    when { branch 'stage' }
+                    steps {
+                        script {
+                            echo "🧪 Running Integration Tests for ${env.BRANCH_NAME}"
+                            sh 'mvn verify -pl e2e-tests'
+                        }
+                    }
+                }
+
+        stage('Levantar contenedores para pruebas') {
+                    when { branch 'stage' }
+                    steps {
+                        script {
+                            sh '''
+                            docker network create ecommerce-test || true
+                            echo "🚀 Levantando ZIPKIN..."
+                            docker run -d --name zipkin-container --network ecommerce-test -p 9411:9411 openzipkin/zipkin
+
+                            echo "🚀 Levantando EUREKA..."
+                            docker run -d --name service-discovery-container --network ecommerce-test -p 8761:8761 \\
+                                -e SPRING_PROFILES_ACTIVE=stage \\
+                                -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                                jacoboossag/service-discovery:${IMAGE_TAG}
+
+                            until curl -s http://localhost:8761/actuator/health | grep '"status":"UP"' > /dev/null; do
+                                echo "⌛ Esperando EUREKA..."
+                                sleep 5
+                            done
+
+                            echo "🚀 Levantando CLOUD-CONFIG..."
+                            docker run -d --name cloud-config-container --network ecommerce-test -p 9296:9296 \\
+                                -e SPRING_PROFILES_ACTIVE=stage \\
+                                -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                                -e EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-discovery-container:8761/eureka/ \\
+                                -e EUREKA_INSTANCE=cloud-config-container \\
+                                jacoboossag/cloud-config:${IMAGE_TAG}
+
+                            until curl -s http://localhost:9296/actuator/health | grep '"status":"UP"' > /dev/null; do
+                                echo "⌛ Esperando CLOUD-CONFIG..."
+                                sleep 5
+                            done
+
+                            echo "🚀 Levantando ORDER-SERVICE..."
+                            docker run -d --name order-service-container --network ecommerce-test -p 8300:8300 \\
+                                -e SPRING_PROFILES_ACTIVE=stage \\
+                                -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                                -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                                -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                                -e EUREKA_INSTANCE=order-service-container \\
+                                jacoboossag/order-service:${IMAGE_TAG}
+
+                            until [ "$(curl -s http://localhost:8300/order-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                                echo "⌛ Esperando ORDER-SERVICE..."
+                                sleep 5
+                            done
+
+                            echo "🚀 Levantando PAYMENT..."
+                            docker run -d --name payment-service-container --network ecommerce-test -p 8400:8400 \\
+                                -e SPRING_PROFILES_ACTIVE=stage \\
+                                -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                                -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                                -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                                -e EUREKA_INSTANCE=payment-service-container \\
+                                jacoboossag/payment-service:${IMAGE_TAG}
+
+                            until [ "$(curl -s http://localhost:8400/payment-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                                echo "⌛ Esperando PAYMENT-SERVICE..."
+                                sleep 5
+                            done
+
+                            echo "🚀 Levantando PRODUCT..."
+                            docker run -d --name product-service-container --network ecommerce-test -p 8500:8500 \\
+                                -e SPRING_PROFILES_ACTIVE=stage \\
+                                -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                                -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                                -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                                -e EUREKA_INSTANCE=product-service-container \\
+                                jacoboossag/product-service:${IMAGE_TAG}
+
+                            until [ "$(curl -s http://localhost:8500/product-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                                echo "⌛ Esperando PRODUCT-SERVICE..."
+                                sleep 5
+                            done
+
+                            echo "🚀 Levantando SHIPPING..."
+                            docker run -d --name shipping-service-container --network ecommerce-test -p 8600:8600 \\
+                                -e SPRING_PROFILES_ACTIVE=stage \\
+                                -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                                -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                                -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                                -e EUREKA_INSTANCE=shipping-service-container \\
+                                jacoboossag/shipping-service:${IMAGE_TAG}
+
+                            until [ "$(curl -s http://localhost:8600/shipping-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                                echo "⌛ Esperando SHIPPING-SERVICE..."
+                                sleep 5
+                            done
+
+                            echo "🚀 Levantando USER..."
+                            docker run -d --name user-service-container --network ecommerce-test -p 8700:8700 \\
+                                -e SPRING_PROFILES_ACTIVE=stage \\
+                                -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                                -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                                -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                                -e EUREKA_INSTANCE=user-service-container \\
+                                jacoboossag/user-service:${IMAGE_TAG}
+
+                            until [ "$(curl -s http://localhost:8700/user-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                                echo "⌛ Esperando USER-SERVICE..."
+                                sleep 5
+                            done
+
+                            echo "🚀 Levantando FAVOURITE..."
+                            docker run -d --name favourite-service-container --network ecommerce-test -p 8800:8800 \\
+                                -e SPRING_PROFILES_ACTIVE=stage \\
+                                -e SPRING_ZIPKIN_BASE_URL=http://zipkin-container:9411 \\
+                                -e SPRING_CONFIG_IMPORT=optional:configserver:http://cloud-config-container:9296 \\
+                                -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
+                                -e EUREKA_INSTANCE=favourite-service-container \\
+                                jacoboossag/favourite-service:${IMAGE_TAG}
+
+                            until [ "$(curl -s http://localhost:8800/favourite-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                                echo "⌛ Esperando FAVOURITE-SERVICE..."
+                                sleep 5
+                            done
+
+                            echo "✅ Todos los contenedores están arriba y saludables."
+                            '''
+                        }
+                    }
+                }
+
+                stage('Run Load Tests with Locust') {
+                    when { branch 'stage' }
+                    steps {
+                        script {
+                            sh '''
+                            echo "🚀 Levantando Locust para order-service..."
+
+                            docker run --rm --network ecommerce-test \\
+                            jacoboossag/locust:${IMAGE_TAG} \\
+                            -f test/order-service/locustfile.py \\
+                            --host http://order-service-container:8300 \\
+                            --headless -u 10 -r 2 -t 1m \\
+                            --csv order-service-stats --csv-full-history
+
+                            echo "🚀 Levantando Locust para payment-service..."
+
+                            docker run --rm --network ecommerce-test \\
+                            jacoboossag/locust:${IMAGE_TAG} \\
+                            -f test/payment-service/locustfile.py \\
+                            --host http://payment-service-container:8400 \\
+                            --headless -u 10 -r 1 -t 1m \\
+                            --csv payment-service-stats --csv-full-history
+
+                            echo "🚀 Levantando Locust para favourite-service..."
+
+                            docker run --rm --network ecommerce-test \\
+                            jacoboossag/locust:${IMAGE_TAG} \\
+                            -f test/favourite-service/locustfile.py \\
+                            --host http://favourite-service-container:8800 \\
+                            --headless -u 10 -r 2 -t 1m \\
+                            --csv favourite-service-stats --csv-full-history
+
+                            echo "✅ Pruebas completadas"
+                            '''
+                        }
+                    }
+                }
+
+                stage('Run Stress Tests with Locust') {
+                    when { branch 'stage' }
+                    steps {
+                        script {
+                            sh '''
+                            echo "🔥 Levantando Locust para prueba de estrés..."
+
+                            docker run --rm --network ecommerce-test \\
+                            jacoboossag/locust:${IMAGE_TAG} \\
+                            -f test/order-service/locustfile.py \\
+                            --host http://order-service-container:8300 \\
+                            --headless -u 50 -r 5 -t 1m \\
+                            --csv order-service-stress
+
+                            docker run --rm --network ecommerce-test \\
+                            jacoboossag/locust:${IMAGE_TAG} \\
+                            -f test/payment-service/locustfile.py \\
+                            --host http://payment-service-container:8400 \\
+                            --headless -u 50 -r 5 -t 1m \\
+                            --csv payment-service-stress
+
+                            docker run --rm --network ecommerce-test \\
+                            jacoboossag/locust:${IMAGE_TAG} \\
+                            -f test/favourite-service/locustfile.py \\
+                            --host http://favourite-service-container:8800 \\
+                            --headless -u 50 -r 5 -t 1m \\
+                            --csv favourite-service-stress
+
+                            echo "✅ Pruebas de estrés completadas"
+                            '''
+                        }
+                    }
+                }
+
+                stage('Detener y eliminar contenedores') {
+                    when { branch 'stage' }
+                    steps {
+                        script {
+                            sh '''
+                            echo "🛑 Deteniendo y eliminando contenedores..."
+
+                            docker rm -f locust || true
+                            docker rm -f favourite-service-container || true
+                            docker rm -f user-service-container || true
+                            docker rm -f shipping-service-container || true
+                            docker rm -f product-service-container || true
+                            docker rm -f payment-service-container || true
+                            docker rm -f order-service-container || true
+                            docker rm -f cloud-config-container || true
+                            docker rm -f service-discovery-container || true
+                            docker rm -f zipkin-container || true
+
+                            echo "🧹 Todos los contenedores eliminados"
+                        '''
+                        }
+                    }
+                }
 
 
 //         //STAGE GRAL PERO SE LE DEBE AGREGAR EL PERFIL

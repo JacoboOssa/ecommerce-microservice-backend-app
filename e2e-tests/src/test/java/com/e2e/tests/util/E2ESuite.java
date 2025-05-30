@@ -57,7 +57,7 @@ public class E2ESuite {
                     .withEnv("SPRING_ZIPKIN_BASE_URL", "http://zipkin-container:9411")
                     .waitingFor(Wait.forHttp("/actuator/health").forStatusCode(200));
 
-            cloudConfigContainer = new GenericContainer<>("jacoboossag/cloud-config-server:stage")
+            cloudConfigContainer = new GenericContainer<>("jacoboossag/cloud-config:stage")
                     .withNetwork(network)
                     .withNetworkAliases("cloud-config-container")
                     .withExposedPorts(9296)

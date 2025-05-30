@@ -270,30 +270,37 @@ pipeline {
                             sh '''
                             echo "🚀 Levantando Locust para order-service..."
 
+                            mkdir -p locust-reports
+
                             docker run --rm --network ecommerce-test \\
+                            -v $PWD/locust-reports:/mnt/locust \\
                             jacoboossag/locust:${IMAGE_TAG} \\
                             -f test/order-service/locustfile.py \\
                             --host http://order-service-container:8300 \\
                             --headless -u 10 -r 2 -t 1m \\
-                            --csv order-service-stats --csv-full-history
+                            --only-summary \\
+                            --html /mnt/locust/order-service-report.html
 
                             echo "🚀 Levantando Locust para payment-service..."
 
                             docker run --rm --network ecommerce-test \\
+                            -v $PWD/locust-reports:/mnt/locust \\
                             jacoboossag/locust:${IMAGE_TAG} \\
                             -f test/payment-service/locustfile.py \\
                             --host http://payment-service-container:8400 \\
                             --headless -u 10 -r 1 -t 1m \\
-                            --csv payment-service-stats --csv-full-history
+                            --only-summary \\
+                            --html /mnt/locust/payment-service-report.html
 
                             echo "🚀 Levantando Locust para favourite-service..."
-
+                            -v $PWD/locust-reports:/mnt/locust \\
                             docker run --rm --network ecommerce-test \\
                             jacoboossag/locust:${IMAGE_TAG} \\
                             -f test/favourite-service/locustfile.py \\
                             --host http://favourite-service-container:8800 \\
                             --headless -u 10 -r 2 -t 1m \\
-                            --csv favourite-service-stats --csv-full-history
+                            --only-summary \\
+                            --html /mnt/locust/favourite-service-report.html
 
                             echo "✅ Pruebas completadas"
                             '''
@@ -309,6 +316,7 @@ pipeline {
                             echo "🔥 Levantando Locust para prueba de estrés..."
 
                             docker run --rm --network ecommerce-test \\
+
                             jacoboossag/locust:${IMAGE_TAG} \\
                             -f test/order-service/locustfile.py \\
                             --host http://order-service-container:8300 \\
@@ -479,6 +487,12 @@ pipeline {
                     echo '🚀 Production deployment completed successfully!'
                 } else if (env.BRANCH_NAME == 'stage') {
                     echo '🎯 Staging deployment completed successfully!'
+                    publishHTML([
+                        reportDir: 'locust-reports',
+                        reportFiles: 'order-service-report.html, payment-service-report.html, favourite-service-report.html',
+                        reportName: 'Locust Stress Test Reports',
+                        keepAll: true
+                    ])
                 } else {
                     echo '🔧 Development tests completed successfully!'
                 }

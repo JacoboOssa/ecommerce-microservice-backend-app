@@ -344,7 +344,6 @@ pipeline {
         }
 
         stage('Create namespace for deployments') {
-            when { anyOf { branch 'dev'; branch 'stage'; branch 'master' } }
             when { branch 'master' }
             steps {
                 sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"

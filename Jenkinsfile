@@ -155,6 +155,8 @@ pipeline {
                     jacoboossag/service-discovery:${IMAGE_TAG}
 
                     until curl -s http://localhost:8761/actuator/health | grep '"status":"UP"' > /dev/null; do
+                        echo "Waiting for service discovery to be ready..."
+                        sleep 10
                     done
 
                     docker run -d --name cloud-config-container --network ecommerce-test -p 9296:9296 \\
@@ -165,6 +167,8 @@ pipeline {
                     jacoboossag/cloud-config:${IMAGE_TAG}
 
                     until curl -s http://localhost:9296/actuator/health | grep '"status":"UP"' > /dev/null; do
+                        echo "Waiting for cloud config to be ready..."
+                        sleep 10
                     done
 
                     docker run -d --name order-service-container --network ecommerce-test -p 8300:8300 \\
@@ -176,6 +180,8 @@ pipeline {
                     jacoboossag/order-service:${IMAGE_TAG}
 
                     until [ "$(curl -s http://localhost:8300/order-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                        echo "Waiting for order service to be ready..."
+                        sleep 10
                     done
 
                     docker run -d --name payment-service-container --network ecommerce-test -p 8400:8400 \\
@@ -187,6 +193,8 @@ pipeline {
                     jacoboossag/payment-service:${IMAGE_TAG}
 
                     until [ "$(curl -s http://localhost:8400/payment-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                        echo "Waiting for payment service to be ready..."
+                        sleep 10
                     done
 
                     docker run -d --name product-service-container --network ecommerce-test -p 8500:8500 \\
@@ -198,6 +206,8 @@ pipeline {
                     jacoboossag/product-service:${IMAGE_TAG}
 
                     until [ "$(curl -s http://localhost:8500/product-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                        echo "Waiting for product service to be ready..."
+                        sleep 10
                     done
 
                     docker run -d --name shipping-service-container --network ecommerce-test -p 8600:8600 \\
@@ -209,6 +219,8 @@ pipeline {
                     jacoboossag/shipping-service:${IMAGE_TAG}
 
                     until [ "$(curl -s http://localhost:8600/shipping-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                        echo "Waiting for shipping service to be ready..."
+                        sleep 10
                     done
 
                     docker run -d --name user-service-container --network ecommerce-test -p 8700:8700 \\
@@ -220,6 +232,8 @@ pipeline {
                     jacoboossag/user-service:${IMAGE_TAG}
                     
                     until [ "$(curl -s http://localhost:8700/user-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                        echo "Waiting for user service to be ready..."
+                        sleep 10
                     done
 
                     docker run -d --name favourite-service-container --network ecommerce-test -p 8800:8800 \\
@@ -231,6 +245,8 @@ pipeline {
                     jacoboossag/favourite-service:${IMAGE_TAG}
 
                     until [ "$(curl -s http://localhost:8800/favourite-service/actuator/health | jq -r '.status')" = "UP" ]; do
+                        echo "Waiting for favourite service to be ready..."
+                        sleep 10
                     done
 
                     '''

@@ -320,7 +320,6 @@ pipeline {
         }
 
         stage('Stop and Remove Containers') {
-            when { branch 'dev' }
             when { branch 'stage' }
             steps {
                 script {

@@ -167,19 +167,20 @@ pipeline {
                         def reportPath = "trivy-reports/${service}.html"
 
 //                         echo "🔍 Escaneando imagen ${imageTag} con Trivy..."
-                        sh """
-                            trivy image --format template \
-                            --template "@/opt/homebrew/Cellar/trivy/0.63.0/share/trivy/templates/html.tpl" \
-                            -o ${reportPath} \
+                        sh '''
+                            trivy image --format template \\
+                            --template "@/opt/homebrew/Cellar/trivy/0.63.0/share/trivy/templates/html.tpl" \\
+                            --severity HIGH,CRITICAL \\
+                            -o ${reportPath} \\
                             ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}
-                        """
+                        '''
                     }
 
                     publishHTML(target: [
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
-                    reportDir: outputDir,
+                    reportDir: 'trivy-reports',
                     reportFiles: '*.html',
                     reportName: 'Trivy Scan Report'
                     ])

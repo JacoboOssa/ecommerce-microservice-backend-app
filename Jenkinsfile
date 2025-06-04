@@ -475,12 +475,12 @@ pipeline {
             }
         }
 
-//         stage('Create namespace for deployments') {
-//             when { branch 'master' }
-//             steps {
-//                 sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
-//             }
-//         }
+        stage('Create namespace for deployments') {
+            when { branch 'master' }
+            steps {
+                sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
+            }
+        }
 //
 //         stage('Deploy common config for microservices') {
 //             when { branch 'master' }
@@ -558,6 +558,14 @@ pipeline {
                     echo 'Development tests completed successfully!'
                 }
             }
+        }
+        failure {
+            emailext(
+                attachLog: true,
+                body: '$DEFAULT_CONTENT',
+                subject: '$DEFAULT_SUBJECT',
+                to: 'jaco2419@gmail.com'
+            )
         }
     }
 }

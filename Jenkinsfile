@@ -11,6 +11,9 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'docker_hub_pwd'
         SERVICES = 'api-gateway cloud-config favourite-service order-service payment-service product-service proxy-client service-discovery shipping-service user-service locust'
         K8S_NAMESPACE = 'ecommerce'
+        JAVA_HOME = tool 'JDK_17'
+        PATH = "${JAVA_HOME}/bin:${env.PATH}"
+        scannerHome = tool 'lil-sonar-tool'
     }
 
     stages {
@@ -69,23 +72,65 @@ pipeline {
             }
         }
 
-        // run sonarqube test
-                stage('Run Sonarqube') {
-                    tools {
-                        jdk 'JDK_17' // Nombre del JDK 17 que configuraste en Jenkins
-                    }
-                    environment {
-                        JAVA_HOME = tool 'JDK_17'
-                        PATH = "${JAVA_HOME}/bin:${env.PATH}"
-                        scannerHome = tool 'lil-sonar-tool'
-                    }
-                    steps {
-                        withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
-                            sh 'java -version'
-                            sh "${scannerHome}/bin/sonar-scanner -Dsonar.java.binaries=target"
+        //         // run sonarqube test
+        //         stage('Run Sonarqube') {
+        //             tools {
+        //                 jdk 'JDK_17'
+        //             }
+        // //          environment {
+        // //              JAVA_HOME = tool 'JDK_17'
+        // //              PATH = "${JAVA_HOME}/bin:${env.PATH}"
+        // //              scannerHome = tool 'lil-sonar-tool'
+        // //          }
+        //             steps {
+        //                 withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
+        //                 sh 'java -version'
+        //                 sh "${scannerHome}/bin/sonar-scanner -Dsonar.java.binaries=target"
+        //                 }
+        //             }
+        //         }
+        stage('Run SonarQube Analysis') {
+            steps {
+                script {
+                    def javaServices = [
+                        'api-gateway',
+                        'cloud-config',
+                        'favourite-service',
+                        'order-service',
+                        'payment-service',
+                        'product-service',
+                        'proxy-client',
+                        'service-discovery',
+                        'shipping-service',
+                        'user-service',
+                        'e2e-tests'
+                    ]
+
+                    def nonJavaServices = [
+                    'locust'
+                ]
+
+                    withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
+                        javaServices.each { service ->
+                            dir(service) {
+                                sh "${scannerHome}/bin/sonar-scanner " +
+                                "-Dsonar.projectKey=${service} " +
+                                "-Dsonar.projectName=${service} " +
+                                '-Dsonar.sources=src ' +
+                                '-Dsonar.java.binaries=target/classes'
+                            }
+                        }
+
+                        dir('locust') {
+                            sh "${scannerHome}/bin/sonar-scanner " +
+                            '-Dsonar.projectKey=locust ' +
+                            '-Dsonar.projectName=locust ' +
+                            '-Dsonar.sources=test'
                         }
                     }
                 }
+            }
+        }
 
         stage('Build Docker Images of each service') {
             when {
@@ -248,7 +293,7 @@ pipeline {
                     -e EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://service-discovery-container:8761/eureka \\
                     -e EUREKA_INSTANCE=user-service-container \\
                     jacoboossag/user-service:${IMAGE_TAG}
-                    
+
                     until [ "$(curl -s http://localhost:8700/user-service/actuator/health | jq -r '.status')" = "UP" ]; do
                         echo "Waiting for user service to be ready..."
                         sleep 10
@@ -289,7 +334,6 @@ pipeline {
                     --only-summary \\
                     --html /mnt/locust/order-service-report.html
 
-
                     docker run --rm --network ecommerce-test \\
                     -v $PWD/locust-reports:/mnt/locust \\
                     jacoboossag/locust:${IMAGE_TAG} \\
@@ -299,7 +343,6 @@ pipeline {
                     --only-summary \\
                     --html /mnt/locust/payment-service-report.html
 
-
                     docker run --rm --network ecommerce-test \\
                     -v $PWD/locust-reports:/mnt/locust \\
                     jacoboossag/locust:${IMAGE_TAG} \\
@@ -308,7 +351,7 @@ pipeline {
                     --headless -u 10 -r 2 -t 1m \\
                     --only-summary \\
                     --html /mnt/locust/favourite-service-report.html
-                    
+
                     '''
                 }
             }
@@ -357,7 +400,7 @@ pipeline {
             when { branch 'stage' }
             steps {
                 script {
-                    sh '''                    
+                    sh '''
                     docker rm -f locust || true
                     docker rm -f favourite-service-container || true
                     docker rm -f user-service-container || true

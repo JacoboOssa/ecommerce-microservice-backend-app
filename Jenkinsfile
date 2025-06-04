@@ -46,6 +46,17 @@ pipeline {
                 git branch: "${env.BRANCH_NAME}", url: 'https://github.com/JacoboOssa/ecommerce-microservice-backend-app'
             }
         }
+        // run sonarqube test
+        stage('Run Sonarqube') {
+            environment {
+                scannerHome = tool 'lil-sonar-tool';
+            }
+            steps {
+                withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
+                sh "${scannerHome}/bin/sonar-scanner"
+                }
+            }
+        }
 
         stage('Verify Tools') {
             steps {

@@ -49,6 +49,7 @@ pipeline {
         // run sonarqube test
         stage('Run Sonarqube') {
             environment {
+                jdk = tool 'JDK_11'
                 scannerHome = tool 'lil-sonar-tool';
             }
             steps {

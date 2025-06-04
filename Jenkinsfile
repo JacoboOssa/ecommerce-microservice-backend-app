@@ -48,18 +48,22 @@ pipeline {
         }
         // run sonarqube test
         stage('Run Sonarqube') {
-            tools{
-                jdk 'JDK_17'
+            tools {
+                jdk 'JDK_17' // Nombre del JDK 17 que configuraste en Jenkins
             }
             environment {
-                scannerHome = tool 'lil-sonar-tool';
+                JAVA_HOME = tool 'JDK_17'
+                PATH = "${JAVA_HOME}/bin:${env.PATH}"
+                scannerHome = tool 'lil-sonar-tool'
             }
             steps {
                 withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
-                sh "${scannerHome}/bin/sonar-scanner"
+                    sh 'java -version'
+                    sh "${scannerHome}/bin/sonar-scanner"
                 }
             }
         }
+
 
         stage('Verify Tools') {
             steps {

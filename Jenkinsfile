@@ -82,7 +82,7 @@ pipeline {
                     steps {
                         withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
                             sh 'java -version'
-                            sh "${scannerHome}/bin/sonar-scanner"
+                            sh "${scannerHome}/bin/sonar-scanner -Dsonar.java.binaries=target"
                         }
                     }
                 }

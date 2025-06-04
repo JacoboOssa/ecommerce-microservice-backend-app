@@ -170,7 +170,6 @@ pipeline {
                         sh '''
                             trivy image --format template \\
                             --template "@/opt/homebrew/Cellar/trivy/0.63.0/share/trivy/templates/html.tpl" \\
-                            --severity HIGH,CRITICAL \\
                             -o ${reportPath} \\
                             ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}
                         '''

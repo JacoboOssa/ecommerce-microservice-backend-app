@@ -11,9 +11,9 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'docker_hub_pwd'
         SERVICES = 'api-gateway cloud-config favourite-service order-service payment-service product-service proxy-client service-discovery shipping-service user-service locust'
         K8S_NAMESPACE = 'ecommerce'
-        JAVA_HOME = tool 'JDK_17'
-        PATH = "${JAVA_HOME}/bin:${env.PATH}"
-        scannerHome = tool 'lil-sonar-tool'
+    // JAVA_HOME = tool 'JDK_17'
+    // PATH = "${JAVA_HOME}/bin:${env.PATH}"
+    // scannerHome = tool 'lil-sonar-tool'
     }
 
     stages {
@@ -90,6 +90,14 @@ pipeline {
         //             }
         //         }
         stage('Run SonarQube Analysis') {
+            tools {
+                jdk 'JDK_17'
+            }
+            environment {
+                JAVA_HOME = tool 'JDK_17'
+                PATH = "${JAVA_HOME}/bin:${env.PATH}"
+                scannerHome = tool 'lil-sonar-tool'
+            }
             steps {
                 script {
                     def javaServices = [
@@ -105,10 +113,6 @@ pipeline {
                         'user-service',
                         'e2e-tests'
                     ]
-
-                    def nonJavaServices = [
-                    'locust'
-                ]
 
                     withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
                         javaServices.each { service ->

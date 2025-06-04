@@ -46,24 +46,6 @@ pipeline {
                 git branch: "${env.BRANCH_NAME}", url: 'https://github.com/JacoboOssa/ecommerce-microservice-backend-app'
             }
         }
-        // run sonarqube test
-        stage('Run Sonarqube') {
-            tools {
-                jdk 'JDK_17' // Nombre del JDK 17 que configuraste en Jenkins
-            }
-            environment {
-                JAVA_HOME = tool 'JDK_17'
-                PATH = "${JAVA_HOME}/bin:${env.PATH}"
-                scannerHome = tool 'lil-sonar-tool'
-            }
-            steps {
-                withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
-                    sh 'java -version'
-                    sh "${scannerHome}/bin/sonar-scanner"
-                }
-            }
-        }
-
 
         stage('Verify Tools') {
             steps {
@@ -86,6 +68,24 @@ pipeline {
                 sh 'mvn clean package -DskipTests'
             }
         }
+
+        // run sonarqube test
+                stage('Run Sonarqube') {
+                    tools {
+                        jdk 'JDK_17' // Nombre del JDK 17 que configuraste en Jenkins
+                    }
+                    environment {
+                        JAVA_HOME = tool 'JDK_17'
+                        PATH = "${JAVA_HOME}/bin:${env.PATH}"
+                        scannerHome = tool 'lil-sonar-tool'
+                    }
+                    steps {
+                        withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
+                            sh 'java -version'
+                            sh "${scannerHome}/bin/sonar-scanner"
+                        }
+                    }
+                }
 
         stage('Build Docker Images of each service') {
             when {

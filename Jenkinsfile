@@ -89,56 +89,63 @@ pipeline {
         //                 }
         //             }
         //         }
-        stage('Run SonarQube Analysis') {
-            tools {
-                jdk 'JDK_17'
-            }
-            environment {
-                JAVA_HOME = tool 'JDK_17'
-                PATH = "${JAVA_HOME}/bin:${env.PATH}"
-                scannerHome = tool 'lil-sonar-tool'
-            }
-            steps {
-                script {
-                    def javaServices = [
-                        'api-gateway',
-                        'cloud-config',
-                        'favourite-service',
-                        'order-service',
-                        'payment-service',
-                        'product-service',
-                        'proxy-client',
-                        'service-discovery',
-                        'shipping-service',
-                        'user-service',
-                        'e2e-tests'
-                    ]
-
-                    withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
-                        javaServices.each { service ->
-                            dir(service) {
-                                sh "${scannerHome}/bin/sonar-scanner " +
-                                "-Dsonar.projectKey=${service} " +
-                                "-Dsonar.projectName=${service} " +
-                                '-Dsonar.sources=src ' +
-                                '-Dsonar.java.binaries=target/classes'
-                            }
-                        }
-
-                        dir('locust') {
-                            sh "${scannerHome}/bin/sonar-scanner " +
-                            '-Dsonar.projectKey=locust ' +
-                            '-Dsonar.projectName=locust ' +
-                            '-Dsonar.sources=test'
-                        }
-                    }
-                }
-            }
-        }
+//         stage('Run SonarQube Analysis') {
+//             tools {
+//                 jdk 'JDK_17'
+//             }
+//             environment {
+//                 JAVA_HOME = tool 'JDK_17'
+//                 PATH = "${JAVA_HOME}/bin:${env.PATH}"
+//                 scannerHome = tool 'lil-sonar-tool'
+//             }
+//             steps {
+//                 script {
+//                     def javaServices = [
+//                         'api-gateway',
+//                         'cloud-config',
+//                         'favourite-service',
+//                         'order-service',
+//                         'payment-service',
+//                         'product-service',
+//                         'proxy-client',
+//                         'service-discovery',
+//                         'shipping-service',
+//                         'user-service',
+//                         'e2e-tests'
+//                     ]
+//
+//                     withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
+//                         javaServices.each { service ->
+//                             dir(service) {
+//                                 sh "${scannerHome}/bin/sonar-scanner " +
+//                                 "-Dsonar.projectKey=${service} " +
+//                                 "-Dsonar.projectName=${service} " +
+//                                 '-Dsonar.sources=src ' +
+//                                 '-Dsonar.java.binaries=target/classes'
+//                             }
+//                         }
+//
+//                         dir('locust') {
+//                             sh "${scannerHome}/bin/sonar-scanner " +
+//                             '-Dsonar.projectKey=locust ' +
+//                             '-Dsonar.projectName=locust ' +
+//                             '-Dsonar.sources=test'
+//                         }
+//                     }
+//                 }
+//             }
+//         }
 
         stage('Trivy Vulnerability Scan & Report') {
+            environment{
+                TRIVY_PATH = '/opt/homebrew/bin'
+            }
             steps {
                 script {
+//                     def trivyPathBin = "/opt/homebrew/bin/trivy"
+                    env.PATH = "${TRIVY_PATH}:${env.PATH}"
+
+
                     def services = [
                         'api-gateway',
                         'cloud-config',
@@ -168,7 +175,6 @@ pipeline {
                         """
                     }
 
-                    // Publicar todos los reportes HTML generados
                     publishHTML(target: [
                     allowMissing: true,
                     alwaysLinkToLastBuild: true,
@@ -198,25 +204,25 @@ pipeline {
             }
         }
 
-        stage('Push Docker Images to Docker Hub') {
-            when {
-                anyOf {
-                    branch 'dev'
-                    branch 'stage'
-                    branch 'master'
-                }
-            }
-            steps {
-                withCredentials([string(credentialsId: "${DOCKER_CREDENTIALS_ID}", variable: 'docker_hub_pwd')]) {
-                    sh "docker login -u ${DOCKERHUB_USER} -p ${docker_hub_pwd}"
-                    script {
-                        SERVICES.split().each { service ->
-                            sh "docker push ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}"
-                        }
-                    }
-                }
-            }
-        }
+//         stage('Push Docker Images to Docker Hub') {
+//             when {
+//                 anyOf {
+//                     branch 'dev'
+//                     branch 'stage'
+//                     branch 'master'
+//                 }
+//             }
+//             steps {
+//                 withCredentials([string(credentialsId: "${DOCKER_CREDENTIALS_ID}", variable: 'docker_hub_pwd')]) {
+//                     sh "docker login -u ${DOCKERHUB_USER} -p ${docker_hub_pwd}"
+//                     script {
+//                         SERVICES.split().each { service ->
+//                             sh "docker push ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}"
+//                         }
+//                     }
+//                 }
+//             }
+//         }
 
         stage('Unit Tests') {
             when { branch 'dev' }
@@ -468,67 +474,67 @@ pipeline {
             }
         }
 
-        stage('Create namespace for deployments') {
-            when { branch 'master' }
-            steps {
-                sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
-            }
-        }
-
-        stage('Deploy common config for microservices') {
-            when { branch 'master' }
-            steps {
-                sh "kubectl apply -f k8s/common-config.yaml -n ${K8S_NAMESPACE}"
-            }
-        }
-
-        stage('Deploy Core Services') {
-            when { branch 'master' }
-            steps {
-                sh "kubectl apply -f k8s/zipkin/ -n ${K8S_NAMESPACE}"
-                sh "kubectl rollout status deployment/zipkin -n ${K8S_NAMESPACE} --timeout=200s"
-
-                sh "kubectl apply -f k8s/service-discovery/ -n ${K8S_NAMESPACE}"
-                sh "kubectl set image deployment/service-discovery service-discovery=${DOCKERHUB_USER}/service-discovery:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
-                sh "kubectl set env deployment/service-discovery SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
-                sh "kubectl rollout status deployment/service-discovery -n ${K8S_NAMESPACE} --timeout=200s"
-
-                sh "kubectl apply -f k8s/cloud-config/ -n ${K8S_NAMESPACE}"
-                sh "kubectl set image deployment/cloud-config cloud-config=${DOCKERHUB_USER}/cloud-config:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
-                sh "kubectl set env deployment/cloud-config SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
-                sh "kubectl rollout status deployment/cloud-config -n ${K8S_NAMESPACE} --timeout=300s"
-            }
-        }
-
-        stage('Deploy Microservices') {
-            when { branch 'master' }
-            steps {
-                script {
-                    def appServices = ['user-service', 'product-service', 'order-service', 'favourite-service', 'payment-service']
-
-                    for (svc in appServices) {
-                        def image = "${DOCKERHUB_USER}/${svc}:${IMAGE_TAG}"
-
-                        sh "kubectl apply -f k8s/${svc}/ -n ${K8S_NAMESPACE}"
-                        sh "kubectl set image deployment/${svc} ${svc}=${image} -n ${K8S_NAMESPACE}"
-                        sh "kubectl set env deployment/${svc} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
-                        sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=200s"
-                    }
-                }
-            }
-        }
-
-        stage('Generate release notes') {
-            when {
-                branch 'master'
-            }
-            steps {
-                sh '''
-                /opt/homebrew/bin/convco changelog > RELEASE_NOTES.md
-                '''
-                archiveArtifacts artifacts: 'RELEASE_NOTES.md', fingerprint: true
-            }
-        }
+//         stage('Create namespace for deployments') {
+//             when { branch 'master' }
+//             steps {
+//                 sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
+//             }
+//         }
+//
+//         stage('Deploy common config for microservices') {
+//             when { branch 'master' }
+//             steps {
+//                 sh "kubectl apply -f k8s/common-config.yaml -n ${K8S_NAMESPACE}"
+//             }
+//         }
+//
+//         stage('Deploy Core Services') {
+//             when { branch 'master' }
+//             steps {
+//                 sh "kubectl apply -f k8s/zipkin/ -n ${K8S_NAMESPACE}"
+//                 sh "kubectl rollout status deployment/zipkin -n ${K8S_NAMESPACE} --timeout=200s"
+//
+//                 sh "kubectl apply -f k8s/service-discovery/ -n ${K8S_NAMESPACE}"
+//                 sh "kubectl set image deployment/service-discovery service-discovery=${DOCKERHUB_USER}/service-discovery:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
+//                 sh "kubectl set env deployment/service-discovery SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+//                 sh "kubectl rollout status deployment/service-discovery -n ${K8S_NAMESPACE} --timeout=200s"
+//
+//                 sh "kubectl apply -f k8s/cloud-config/ -n ${K8S_NAMESPACE}"
+//                 sh "kubectl set image deployment/cloud-config cloud-config=${DOCKERHUB_USER}/cloud-config:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
+//                 sh "kubectl set env deployment/cloud-config SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+//                 sh "kubectl rollout status deployment/cloud-config -n ${K8S_NAMESPACE} --timeout=300s"
+//             }
+//         }
+//
+//         stage('Deploy Microservices') {
+//             when { branch 'master' }
+//             steps {
+//                 script {
+//                     def appServices = ['user-service', 'product-service', 'order-service', 'favourite-service', 'payment-service']
+//
+//                     for (svc in appServices) {
+//                         def image = "${DOCKERHUB_USER}/${svc}:${IMAGE_TAG}"
+//
+//                         sh "kubectl apply -f k8s/${svc}/ -n ${K8S_NAMESPACE}"
+//                         sh "kubectl set image deployment/${svc} ${svc}=${image} -n ${K8S_NAMESPACE}"
+//                         sh "kubectl set env deployment/${svc} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+//                         sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=200s"
+//                     }
+//                 }
+//             }
+//         }
+//
+//         stage('Generate release notes') {
+//             when {
+//                 branch 'master'
+//             }
+//             steps {
+//                 sh '''
+//                 /opt/homebrew/bin/convco changelog > RELEASE_NOTES.md
+//                 '''
+//                 archiveArtifacts artifacts: 'RELEASE_NOTES.md', fingerprint: true
+//             }
+//         }
     }
 
     post {
@@ -538,6 +544,7 @@ pipeline {
 
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Production deployment completed successfully!'
+
                 } else if (env.BRANCH_NAME == 'stage') {
                     echo 'Staging deployment completed successfully!'
                     publishHTML([

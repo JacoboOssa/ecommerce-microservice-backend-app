@@ -564,7 +564,7 @@ pipeline {
                 attachLog: true,
                 body: '$DEFAULT_CONTENT',
                 subject: '$DEFAULT_SUBJECT',
-                to: 'jaco2419@gmail.com'
+                to: '$DEFAULT_RECIPIENTS',
             )
         }
     }

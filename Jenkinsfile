@@ -48,8 +48,10 @@ pipeline {
         }
         // run sonarqube test
         stage('Run Sonarqube') {
+            tools{
+                jdk 'JDK_17'
+            }
             environment {
-                jdk = tool 'JDK_11'
                 scannerHome = tool 'lil-sonar-tool';
             }
             steps {

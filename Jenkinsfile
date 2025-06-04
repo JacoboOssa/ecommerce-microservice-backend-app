@@ -160,7 +160,7 @@ pipeline {
                     ]
 
 //                     def outputDir = 'trivy-reports'
-                    sh "mkdir trivy-reports"
+                    sh "mkdir -p trivy-reports"
 
                     services.each { service ->
 //                         def imageTag = "jacoboossag/${service}:prod"

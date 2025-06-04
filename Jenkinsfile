@@ -136,6 +136,51 @@ pipeline {
             }
         }
 
+        stage('Trivy Vulnerability Scan & Report') {
+            steps {
+                script {
+                    def services = [
+                        'api-gateway',
+                        'cloud-config',
+                        'favourite-service',
+                        'order-service',
+                        'payment-service',
+                        'product-service',
+                        'proxy-client',
+                        'service-discovery',
+                        'shipping-service',
+                        'user-service'
+                    ]
+
+//                     def outputDir = 'trivy-reports'
+                    sh "mkdir trivy-reports"
+
+                    services.each { service ->
+//                         def imageTag = "jacoboossag/${service}:prod"
+                        def reportPath = "trivy-reports/${service}.html"
+
+//                         echo "🔍 Escaneando imagen ${imageTag} con Trivy..."
+                        sh """
+                            trivy image --format template \
+                            --template "@/opt/homebrew/Cellar/trivy/0.63.0/share/trivy/templates/html.tpl" \
+                            -o ${reportPath} \
+                            ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}
+                        """
+                    }
+
+                    // Publicar todos los reportes HTML generados
+                    publishHTML(target: [
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: outputDir,
+                    reportFiles: '*.html',
+                    reportName: 'Trivy Scan Report'
+                    ])
+                }
+            }
+        }
+
         stage('Build Docker Images of each service') {
             when {
                 anyOf {

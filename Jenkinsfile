@@ -478,13 +478,6 @@ pipeline {
         stage('Waiting approval for deployment') {
             when { branch 'master' }
             steps {
-                input message: 'Approve deployment to production (kubernetes) ?', ok: 'Deploy'
-            }
-        }
-
-        stage('Simulate deployment to production') {
-            when { branch 'master' }
-            steps {
                 script {
                     emailext(
                         to: '$DEFAULT_RECIPIENTS',
@@ -497,6 +490,16 @@ pipeline {
                         ${env.BUILD_URL}
                         """
                     )
+                    
+                    input message: 'Approve deployment to production (kubernetes) ?', ok: 'Deploy'
+                }
+            }
+        }
+
+        stage('Simulate deployment to production') {
+            when { branch 'master' }
+            steps {
+                script {
                     echo "Simulating deployment to production with tag ${IMAGE_TAG} and profile ${SPRING_PROFILES_ACTIVE}"
                 }
             }

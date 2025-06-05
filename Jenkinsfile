@@ -136,74 +136,74 @@ pipeline {
 //             }
 //         }
 
-        stage('Trivy Vulnerability Scan & Report') {
-            environment{
-                TRIVY_PATH = '/opt/homebrew/bin'
-            }
-            steps {
-                script {
-//                     def trivyPathBin = "/opt/homebrew/bin/trivy"
-                    env.PATH = "${TRIVY_PATH}:${env.PATH}"
+//         stage('Trivy Vulnerability Scan & Report') {
+//             environment{
+//                 TRIVY_PATH = '/opt/homebrew/bin'
+//             }
+//             steps {
+//                 script {
+// //                     def trivyPathBin = "/opt/homebrew/bin/trivy"
+//                     env.PATH = "${TRIVY_PATH}:${env.PATH}"
+//
+//
+//                     def services = [
+//                         'api-gateway',
+//                         'cloud-config',
+//                         'favourite-service',
+//                         'order-service',
+//                         'payment-service',
+//                         'product-service',
+//                         'proxy-client',
+//                         'service-discovery',
+//                         'shipping-service',
+//                         'user-service'
+//                     ]
+//
+// //                     def outputDir = 'trivy-reports'
+//                     sh "mkdir -p trivy-reports"
+//
+//                     services.each { service ->
+// //                         def imageTag = "jacoboossag/${service}:prod"
+//                         def reportPath = "trivy-reports/${service}.html"
+//
+// //                         echo "🔍 Escaneando imagen ${imageTag} con Trivy..."
+//                         sh"""
+//                             trivy image --format template \\
+//                             --template "@/opt/homebrew/Cellar/trivy/0.63.0/share/trivy/templates/html.tpl" \\
+//                             --severity HIGH,CRITICAL \\
+//                             -o ${reportPath} \\
+//                             ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}
+//                         """
+//                     }
+//
+//                     publishHTML(target: [
+//                     allowMissing: true,
+//                     alwaysLinkToLastBuild: true,
+//                     keepAll: true,
+//                     reportDir: 'trivy-reports',
+//                     reportFiles: '*.html',
+//                     reportName: 'Trivy Scan Report'
+//                     ])
+//                 }
+//             }
+//         }
 
-
-                    def services = [
-                        'api-gateway',
-                        'cloud-config',
-                        'favourite-service',
-                        'order-service',
-                        'payment-service',
-                        'product-service',
-                        'proxy-client',
-                        'service-discovery',
-                        'shipping-service',
-                        'user-service'
-                    ]
-
-//                     def outputDir = 'trivy-reports'
-                    sh "mkdir -p trivy-reports"
-
-                    services.each { service ->
-//                         def imageTag = "jacoboossag/${service}:prod"
-                        def reportPath = "trivy-reports/${service}.html"
-
-//                         echo "🔍 Escaneando imagen ${imageTag} con Trivy..."
-                        sh"""
-                            trivy image --format template \\
-                            --template "@/opt/homebrew/Cellar/trivy/0.63.0/share/trivy/templates/html.tpl" \\
-                            --severity HIGH,CRITICAL \\
-                            -o ${reportPath} \\
-                            ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}
-                        """
-                    }
-
-                    publishHTML(target: [
-                    allowMissing: true,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'trivy-reports',
-                    reportFiles: '*.html',
-                    reportName: 'Trivy Scan Report'
-                    ])
-                }
-            }
-        }
-
-        stage('Build Docker Images of each service') {
-            when {
-                anyOf {
-                    branch 'dev'
-                    branch 'stage'
-                    branch 'master'
-                }
-            }
-            steps {
-                script {
-                    SERVICES.split().each { service ->
-                        sh "docker build -t ${DOCKERHUB_USER}/${service}:${IMAGE_TAG} --build-arg SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} ./${service}"
-                    }
-                }
-            }
-        }
+        // stage('Build Docker Images of each service') {
+        //     when {
+        //         anyOf {
+        //             branch 'dev'
+        //             branch 'stage'
+        //             branch 'master'
+        //         }
+        //     }
+        //     steps {
+        //         script {
+        //             SERVICES.split().each { service ->
+        //                 sh "docker build -t ${DOCKERHUB_USER}/${service}:${IMAGE_TAG} --build-arg SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} ./${service}"
+        //             }
+        //         }
+        //     }
+        // }
 
 //         stage('Push Docker Images to Docker Hub') {
 //             when {
@@ -486,74 +486,83 @@ pipeline {
             when { branch 'master' }
             steps {
                 script {
+                    emailext(
+                        to: '$DEFAULT_RECIPIENTS',
+                        subject: "Action Required: Approval Needed for Deploy of Build #${env.BUILD_NUMBER}",
+                        body: """\
+                        Hello dead man (daniel) and Goat Ossa,
+                        The build #${env.BUILD_NUMBER} for branch *${env.BRANCH_NAME}* has completed and is pending approval for deployment.
+                        Please review the changes and approve or abort
+                        You can access the build details here:
+                        ${env.BUILD_URL}
+                        """
+                    )
                     echo "Simulating deployment to production with tag ${IMAGE_TAG} and profile ${SPRING_PROFILES_ACTIVE}"
                 }
             }
         }
 
-        
-
-        // stage('Create namespace for deployments') {
-        //     when { branch 'master' }
-        //     steps {
-        //         sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
-        //     }
-        // }
-//
-//         stage('Deploy common config for microservices') {
-//             when { branch 'master' }
-//             steps {
-//                 sh "kubectl apply -f k8s/common-config.yaml -n ${K8S_NAMESPACE}"
-//             }
-//         }
-//
-//         stage('Deploy Core Services') {
-//             when { branch 'master' }
-//             steps {
-//                 sh "kubectl apply -f k8s/zipkin/ -n ${K8S_NAMESPACE}"
-//                 sh "kubectl rollout status deployment/zipkin -n ${K8S_NAMESPACE} --timeout=200s"
-//
-//                 sh "kubectl apply -f k8s/service-discovery/ -n ${K8S_NAMESPACE}"
-//                 sh "kubectl set image deployment/service-discovery service-discovery=${DOCKERHUB_USER}/service-discovery:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
-//                 sh "kubectl set env deployment/service-discovery SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
-//                 sh "kubectl rollout status deployment/service-discovery -n ${K8S_NAMESPACE} --timeout=200s"
-//
-//                 sh "kubectl apply -f k8s/cloud-config/ -n ${K8S_NAMESPACE}"
-//                 sh "kubectl set image deployment/cloud-config cloud-config=${DOCKERHUB_USER}/cloud-config:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
-//                 sh "kubectl set env deployment/cloud-config SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
-//                 sh "kubectl rollout status deployment/cloud-config -n ${K8S_NAMESPACE} --timeout=300s"
-//             }
-//         }
-//
-//         stage('Deploy Microservices') {
-//             when { branch 'master' }
-//             steps {
-//                 script {
-//                     def appServices = ['user-service', 'product-service', 'order-service', 'favourite-service', 'payment-service']
-//
-//                     for (svc in appServices) {
-//                         def image = "${DOCKERHUB_USER}/${svc}:${IMAGE_TAG}"
-//
-//                         sh "kubectl apply -f k8s/${svc}/ -n ${K8S_NAMESPACE}"
-//                         sh "kubectl set image deployment/${svc} ${svc}=${image} -n ${K8S_NAMESPACE}"
-//                         sh "kubectl set env deployment/${svc} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
-//                         sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=200s"
-//                     }
-//                 }
-//             }
-//         }
-//
-//         stage('Generate release notes') {
-//             when {
-//                 branch 'master'
-//             }
-//             steps {
-//                 sh '''
-//                 /opt/homebrew/bin/convco changelog > RELEASE_NOTES.md
-//                 '''
-//                 archiveArtifacts artifacts: 'RELEASE_NOTES.md', fingerprint: true
-//             }
-//         }
+    // stage('Create namespace for deployments') {
+    //     when { branch 'master' }
+    //     steps {
+    //         sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
+    //     }
+    // }
+    //
+    //         stage('Deploy common config for microservices') {
+    //             when { branch 'master' }
+    //             steps {
+    //                 sh "kubectl apply -f k8s/common-config.yaml -n ${K8S_NAMESPACE}"
+    //             }
+    //         }
+    //
+    //         stage('Deploy Core Services') {
+    //             when { branch 'master' }
+    //             steps {
+    //                 sh "kubectl apply -f k8s/zipkin/ -n ${K8S_NAMESPACE}"
+    //                 sh "kubectl rollout status deployment/zipkin -n ${K8S_NAMESPACE} --timeout=200s"
+    //
+    //                 sh "kubectl apply -f k8s/service-discovery/ -n ${K8S_NAMESPACE}"
+    //                 sh "kubectl set image deployment/service-discovery service-discovery=${DOCKERHUB_USER}/service-discovery:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
+    //                 sh "kubectl set env deployment/service-discovery SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+    //                 sh "kubectl rollout status deployment/service-discovery -n ${K8S_NAMESPACE} --timeout=200s"
+    //
+    //                 sh "kubectl apply -f k8s/cloud-config/ -n ${K8S_NAMESPACE}"
+    //                 sh "kubectl set image deployment/cloud-config cloud-config=${DOCKERHUB_USER}/cloud-config:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
+    //                 sh "kubectl set env deployment/cloud-config SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+    //                 sh "kubectl rollout status deployment/cloud-config -n ${K8S_NAMESPACE} --timeout=300s"
+    //             }
+    //         }
+    //
+    //         stage('Deploy Microservices') {
+    //             when { branch 'master' }
+    //             steps {
+    //                 script {
+    //                     def appServices = ['user-service', 'product-service', 'order-service', 'favourite-service', 'payment-service']
+    //
+    //                     for (svc in appServices) {
+    //                         def image = "${DOCKERHUB_USER}/${svc}:${IMAGE_TAG}"
+    //
+    //                         sh "kubectl apply -f k8s/${svc}/ -n ${K8S_NAMESPACE}"
+    //                         sh "kubectl set image deployment/${svc} ${svc}=${image} -n ${K8S_NAMESPACE}"
+    //                         sh "kubectl set env deployment/${svc} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+    //                         sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=200s"
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //
+    //         stage('Generate release notes') {
+    //             when {
+    //                 branch 'master'
+    //             }
+    //             steps {
+    //                 sh '''
+    //                 /opt/homebrew/bin/convco changelog > RELEASE_NOTES.md
+    //                 '''
+    //                 archiveArtifacts artifacts: 'RELEASE_NOTES.md', fingerprint: true
+    //             }
+    //         }
     }
 
     post {
@@ -563,7 +572,6 @@ pipeline {
 
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Production deployment completed successfully!'
-
                 } else if (env.BRANCH_NAME == 'stage') {
                     echo 'Staging deployment completed successfully!'
                     publishHTML([

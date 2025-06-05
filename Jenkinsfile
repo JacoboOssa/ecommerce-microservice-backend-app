@@ -475,12 +475,30 @@ pipeline {
             }
         }
 
-        stage('Create namespace for deployments') {
+        stage('Waiting approval for deployment') {
             when { branch 'master' }
             steps {
-                sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
+                input message: 'Approve deployment to production (kubernetes) ?', ok: 'Deploy'
             }
         }
+
+        stage('Simulate deployment to production') {
+            when { branch 'master' }
+            steps {
+                script {
+                    echo "Simulating deployment to production with tag ${IMAGE_TAG} and profile ${SPRING_PROFILES_ACTIVE}"
+                }
+            }
+        }
+
+        
+
+        // stage('Create namespace for deployments') {
+        //     when { branch 'master' }
+        //     steps {
+        //         sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
+        //     }
+        // }
 //
 //         stage('Deploy common config for microservices') {
 //             when { branch 'master' }

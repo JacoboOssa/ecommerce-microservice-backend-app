@@ -15,6 +15,13 @@ pipeline {
         GCLOUD_PATH = '/Users/jacoboossag/Downloads/google-cloud-sdk/bin'
     }
 
+    def withGcloud(cmds) {
+        return """
+            export PATH=$GCLOUD_PATH:\$PATH
+            ${cmds}
+        """
+    }
+
     stages {
         stage('Scanning Branch') {
             steps {
@@ -55,7 +62,7 @@ pipeline {
                 sh 'mvn -version'
                 sh 'docker --version'
                 sh 'kubectl config current-context'
-                sh 'gcloud version'
+                sh withGcloud('gcloud version')
             }
         }
 

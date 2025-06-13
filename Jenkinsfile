@@ -459,16 +459,18 @@ pipeline {
                     echo '==> Iniciando escaneos con OWASP ZAP'
 
                     def targets = [
-                [name: 'order-service', url: 'http://order-service-container:8300/order-service'],
-                [name: 'payment-service', url: 'http://payment-service-container:8400/payment-service'],
-                [name: 'product-service', url: 'http://product-service-container:8500/product-service'],
-                [name: 'shipping-service', url: 'http://shipping-service-container:8600/shipping-service'],
-                [name: 'user-service', url: 'http://user-service-container:8700/user-service'],
-                [name: 'favourite-service', url: 'http://favourite-service-container:8800/favourite-service']
-            ]
+                        [name: 'order-service', url: 'http://order-service-container:8300/order-service'],
+                        [name: 'payment-service', url: 'http://payment-service-container:8400/payment-service'],
+                        [name: 'product-service', url: 'http://product-service-container:8500/product-service'],
+                        [name: 'shipping-service', url: 'http://shipping-service-container:8600/shipping-service'],
+                        [name: 'user-service', url: 'http://user-service-container:8700/user-service'],
+                        [name: 'favourite-service', url: 'http://favourite-service-container:8800/favourite-service']
+                    ]
+
+                    sh 'mkdir -p zap-reports'
 
                     targets.each { service ->
-                        def reportFile = "report-${service.name}.html"
+                        def reportFile = "zap-reports/report-${service.name}.html"
                         echo "==> Escaneando ${service.name} (${service.url})"
                         sh """
                     docker run --rm \
@@ -495,7 +497,7 @@ pipeline {
                     allowMissing: false,
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
-                    reportDir: '.',
+                    reportDir: 'zap-reports',
                     reportFiles: 'report-*.html',
                     reportName: 'ZAP Security Reports',
                     reportTitles: 'OWASP ZAP Full Scan Results'

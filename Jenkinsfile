@@ -188,42 +188,42 @@ pipeline {
 //             }
 //         }
 
-        // stage('Build Docker Images of each service') {
-        //     when {
-        //         anyOf {
-        //             branch 'dev'
-        //             branch 'stage'
-        //             branch 'master'
-        //         }
-        //     }
-        //     steps {
-        //         script {
-        //             SERVICES.split().each { service ->
-        //                 sh "docker build -t ${DOCKERHUB_USER}/${service}:${IMAGE_TAG} --build-arg SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} ./${service}"
-        //             }
-        //         }
-        //     }
-        // }
+        stage('Build Docker Images of each service') {
+            when {
+                anyOf {
+                    branch 'dev'
+                    branch 'stage'
+                    branch 'master'
+                }
+            }
+            steps {
+                script {
+                    SERVICES.split().each { service ->
+                        sh "docker buildx build --platform linux/amd64,linux/arm64 -t ${DOCKERHUB_USER}/${service}:${IMAGE_TAG} --build-arg SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} ./${service}"
+                    }
+                }
+            }
+        }
 
-//         stage('Push Docker Images to Docker Hub') {
-//             when {
-//                 anyOf {
-//                     branch 'dev'
-//                     branch 'stage'
-//                     branch 'master'
-//                 }
-//             }
-//             steps {
-//                 withCredentials([string(credentialsId: "${DOCKER_CREDENTIALS_ID}", variable: 'docker_hub_pwd')]) {
-//                     sh "docker login -u ${DOCKERHUB_USER} -p ${docker_hub_pwd}"
-//                     script {
-//                         SERVICES.split().each { service ->
-//                             sh "docker push ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}"
-//                         }
-//                     }
-//                 }
-//             }
-//         }
+        stage('Push Docker Images to Docker Hub') {
+            when {
+                anyOf {
+                    branch 'dev'
+                    branch 'stage'
+                    branch 'master'
+                }
+            }
+            steps {
+                withCredentials([string(credentialsId: "${DOCKER_CREDENTIALS_ID}", variable: 'docker_hub_pwd')]) {
+                    sh "docker login -u ${DOCKERHUB_USER} -p ${docker_hub_pwd}"
+                    script {
+                        SERVICES.split().each { service ->
+                            sh "docker push ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}"
+                        }
+                    }
+                }
+            }
+        }
 
         stage('Unit Tests') {
             when { branch 'dev' }

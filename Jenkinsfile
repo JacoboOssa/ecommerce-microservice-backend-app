@@ -281,7 +281,7 @@ pipeline {
                 junit 'e2e-tests/target/failsafe-reports/*.xml'
             }
         }
-
+        /*
         stage('Start containers for load and stress testing') {
             when { branch 'master' }
             steps {
@@ -509,6 +509,7 @@ pipeline {
                 }
             }
         }
+        */
 
 //         stage('Publicar Reportes de Seguridad') {
 //             when { branch 'master' }
@@ -528,30 +529,30 @@ pipeline {
 //             }
 //         }
 
-        stage('Stop and Remove Containers') {
-            when { branch 'master' }
-            steps {
-                script {
-                    sh '''
-                    docker rm -f locust || true
-                    docker rm -f favourite-service-container || true
-                    docker rm -f user-service-container || true
-                    docker rm -f shipping-service-container || true
-                    docker rm -f product-service-container || true
-                    docker rm -f payment-service-container || true
-                    docker rm -f order-service-container || true
-                    docker rm -f cloud-config-container || true
-                    docker rm -f service-discovery-container || true
-                    docker rm -f zipkin-container || true
-
-                    docker rm -f zap-container || true
-
-                    docker network rm ecommerce-test || true
-
-                    '''
-                }
-            }
-        }
+//         stage('Stop and Remove Containers') {
+//             when { branch 'master' }
+//             steps {
+//                 script {
+//                     sh '''
+//                     docker rm -f locust || true
+//                     docker rm -f favourite-service-container || true
+//                     docker rm -f user-service-container || true
+//                     docker rm -f shipping-service-container || true
+//                     docker rm -f product-service-container || true
+//                     docker rm -f payment-service-container || true
+//                     docker rm -f order-service-container || true
+//                     docker rm -f cloud-config-container || true
+//                     docker rm -f service-discovery-container || true
+//                     docker rm -f zipkin-container || true
+//
+//                     docker rm -f zap-container || true
+//
+//                     docker network rm ecommerce-test || true
+//
+//                     '''
+//                 }
+//             }
+//         }
 
 //         stage('Waiting approval for deployment') {
 //             when { branch 'master' }

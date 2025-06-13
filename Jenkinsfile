@@ -595,7 +595,7 @@ pipeline {
             when { branch 'master' }
             steps {
                 withCredentials([file(credentialsId: 'gcloud-creds', variable: 'GCLOUD_CREDS')]) {
-                    sh 'gcloud container clusters get-credentials k8s-cluster-prod --zone us-central1 --project beaming-pillar-461818-j7'
+                    sh withGcloud('gcloud container clusters get-credentials k8s-cluster-prod --zone us-central1 --project beaming-pillar-461818-j7')
                 }
             }
         }

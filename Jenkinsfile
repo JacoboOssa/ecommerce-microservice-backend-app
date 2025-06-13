@@ -63,7 +63,7 @@ pipeline {
                 sh 'mvn -version'
                 sh 'docker --version'
                 sh 'kubectl config current-context'
-                sh withGcloud('gcloud version')
+                sh 'gcloud version'
             }
         }
 
@@ -596,7 +596,7 @@ pipeline {
             when { branch 'master' }
             steps {
                 withCredentials([file(credentialsId: 'gcloud-creds', variable: 'GCLOUD_CREDS')]) {
-                    sh withGcloud('gcloud container clusters get-credentials k8s-cluster-prod --zone us-central1 --project beaming-pillar-461818-j7')
+                    sh 'gcloud container clusters get-credentials k8s-cluster-prod --zone us-central1 --project beaming-pillar-461818-j7'
                 }
             }
         }

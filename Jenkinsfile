@@ -188,42 +188,42 @@ pipeline {
 //             }
 //         }
 
-        stage('Build Docker Images of each service') {
-            when {
-                anyOf {
-                    branch 'dev'
-                    branch 'stage'
-                    branch 'master'
-                }
-            }
-            steps {
-                script {
-                    SERVICES.split().each { service ->
-                        sh "docker buildx build --platform linux/amd64,linux/arm64 -t ${DOCKERHUB_USER}/${service}:${IMAGE_TAG} --build-arg SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} --push ./${service}"
-                    }
-                }
-            }
-        }
-
-        stage('Push Docker Images to Docker Hub') {
-            when {
-                anyOf {
-                    branch 'dev'
-                    branch 'stage'
-                    branch 'master'
-                }
-            }
-            steps {
-                withCredentials([string(credentialsId: "${DOCKER_CREDENTIALS_ID}", variable: 'docker_hub_pwd')]) {
-                    sh "docker login -u ${DOCKERHUB_USER} -p ${docker_hub_pwd}"
-                    script {
-                        SERVICES.split().each { service ->
-                            sh "docker push ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}"
-                        }
-                    }
-                }
-            }
-        }
+//         stage('Build Docker Images of each service') {
+//             when {
+//                 anyOf {
+//                     branch 'dev'
+//                     branch 'stage'
+//                     branch 'master'
+//                 }
+//             }
+//             steps {
+//                 script {
+//                     SERVICES.split().each { service ->
+//                         sh "docker buildx build --platform linux/amd64,linux/arm64 -t ${DOCKERHUB_USER}/${service}:${IMAGE_TAG} --build-arg SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} --push ./${service}"
+//                     }
+//                 }
+//             }
+//         }
+//
+//         stage('Push Docker Images to Docker Hub') {
+//             when {
+//                 anyOf {
+//                     branch 'dev'
+//                     branch 'stage'
+//                     branch 'master'
+//                 }
+//             }
+//             steps {
+//                 withCredentials([string(credentialsId: "${DOCKER_CREDENTIALS_ID}", variable: 'docker_hub_pwd')]) {
+//                     sh "docker login -u ${DOCKERHUB_USER} -p ${docker_hub_pwd}"
+//                     script {
+//                         SERVICES.split().each { service ->
+//                             sh "docker push ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}"
+//                         }
+//                     }
+//                 }
+//             }
+//         }
 
         stage('Unit Tests') {
             when { branch 'dev' }
@@ -260,7 +260,7 @@ pipeline {
         }
 
         stage('Start containers for load and stress testing') {
-            when { branch 'stage' }
+            when { branch 'master' }
             steps {
                 script {
                     sh '''
@@ -452,8 +452,58 @@ pipeline {
             }
         }
 
+        stage('OWASP ZAP Scan') {
+            when { branch 'master' }
+            steps {
+                script {
+                    echo '==> Iniciando escaneo con OWASP ZAP'
+
+                    // 1. Iniciar contenedor ZAP en la misma red
+                    sh '''
+                        docker pull owasp/zap2docker-stable:latest
+                        docker run -dt --name zap-container --network ecommerce-test \
+                            -v ${WORKSPACE}:/zap/wrk \
+                            owasp/zap2docker-stable /bin/bash
+                    '''
+
+                    // 2. Definir servicios y puertos
+                    def targets = [
+                        [name: 'order-service', url: 'http://order-service-container:8300/order-service'],
+                        [name: 'payment-service', url: 'http://payment-service-container:8400/payment-service'],
+                        [name: 'product-service', url: 'http://product-service-container:8500/product-service'],
+                        [name: 'shipping-service', url: 'http://shipping-service-container:8600/shipping-service'],
+                        [name: 'user-service', url: 'http://user-service-container:8700/user-service'],
+                        [name: 'favourite-service', url: 'http://favourite-service-container:8800/favourite-service']
+                    ]
+
+                    // 3. Ejecutar ZAP Full Scan a cada uno
+                    targets.each { service ->
+                        def reportFile = "report-${service.name}.html"
+                        echo "==> Escaneando ${service.name} (${service.url})"
+                        sh """
+                            docker exec zap-container \
+                            zap-full-scan.py \
+                            -t ${service.url} \
+                            -r /zap/wrk/${reportFile} \
+                            -I
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Publicar Reportes de Seguridad') {
+            when { branch 'master' }
+            steps {
+                echo '==> Archivando reportes HTML de ZAP'
+                archiveArtifacts artifacts: 'report-*.html', fingerprint: true
+            }
+        }
+
+
+
         stage('Stop and Remove Containers') {
-            when { branch 'stage' }
+            when { branch 'master' }
             steps {
                 script {
                     sh '''
@@ -468,6 +518,9 @@ pipeline {
                     docker rm -f service-discovery-container || true
                     docker rm -f zipkin-container || true
 
+                    docker rm -f zap-container || true
+
+
                     docker network rm ecommerce-test || true
 
                     '''
@@ -475,35 +528,35 @@ pipeline {
             }
         }
 
-        stage('Waiting approval for deployment') {
-            when { branch 'master' }
-            steps {
-                script {
-                    emailext(
-                        to: '$DEFAULT_RECIPIENTS',
-                        subject: "Action Required: Approval Needed for Deploy of Build #${env.BUILD_NUMBER}",
-                        body: """\
-                        Hello dead man (daniel) and Goat Ossa,
-                        The build #${env.BUILD_NUMBER} for branch *${env.BRANCH_NAME}* has completed and is pending approval for deployment.
-                        Please review the changes and approve or abort
-                        You can access the build details here:
-                        ${env.BUILD_URL}
-                        """
-                    )
-                    
-                    input message: 'Approve deployment to production (kubernetes) ?', ok: 'Deploy'
-                }
-            }
-        }
-
-        stage('Simulate deployment to production') {
-            when { branch 'master' }
-            steps {
-                script {
-                    echo "Simulating deployment to production with tag ${IMAGE_TAG} and profile ${SPRING_PROFILES_ACTIVE}"
-                }
-            }
-        }
+//         stage('Waiting approval for deployment') {
+//             when { branch 'master' }
+//             steps {
+//                 script {
+//                     emailext(
+//                         to: '$DEFAULT_RECIPIENTS',
+//                         subject: "Action Required: Approval Needed for Deploy of Build #${env.BUILD_NUMBER}",
+//                         body: """\
+//                         Hello dead man (daniel) and Goat Ossa,
+//                         The build #${env.BUILD_NUMBER} for branch *${env.BRANCH_NAME}* has completed and is pending approval for deployment.
+//                         Please review the changes and approve or abort
+//                         You can access the build details here:
+//                         ${env.BUILD_URL}
+//                         """
+//                     )
+//
+//                     input message: 'Approve deployment to production (kubernetes) ?', ok: 'Deploy'
+//                 }
+//             }
+//         }
+//
+//         stage('Simulate deployment to production') {
+//             when { branch 'master' }
+//             steps {
+//                 script {
+//                     echo "Simulating deployment to production with tag ${IMAGE_TAG} and profile ${SPRING_PROFILES_ACTIVE}"
+//                 }
+//             }
+//         }
 
     // stage('Create namespace for deployments') {
     //     when { branch 'master' }

@@ -467,43 +467,43 @@ pipeline {
                         [name: 'favourite-service', url: 'http://favourite-service-container:8800/favourite-service']
                     ]
 
-                    sh 'mkdir -p zap-reports'
+//                     sh 'mkdir -p zap-reports'
 
                     targets.each { service ->
                         def reportFile = "zap-reports/report-${service.name}.html"
                         echo "==> Escaneando ${service.name} (${service.url})"
                         sh """
-                    docker run --rm \
-                        --network ecommerce-test \
-                        -v ${env.WORKSPACE}:/zap/wrk \
-                        zaproxy/zap-stable \
-                        zap-full-scan.py \
-                        -t ${service.url} \
-                        -r ${reportFile} \
-                        -I
-                """
+                            docker run --rm \
+                            --network ecommerce-test \
+                            -v ${env.WORKSPACE}:/zap/wrk \
+                            zaproxy/zap-stable \
+                            zap-full-scan.py \
+                            -t ${service.url} \
+//                             -r ${reportFile} \
+                            -I
+                        """
                     }
                 }
             }
         }
 
-        stage('Publicar Reportes de Seguridad') {
-            when { branch 'master' }
-            steps {
-                //                 echo '==> Archivando reportes HTML de ZAP'
-                //                 archiveArtifacts artifacts: 'report-*.html', fingerprint: true
-                echo '==> Publicando reportes HTML en interfaz Jenkins'
-                publishHTML([
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'zap-reports',
-                    reportFiles: 'report-*.html',
-                    reportName: 'ZAP Security Reports',
-                    reportTitles: 'OWASP ZAP Full Scan Results'
-                ])
-            }
-        }
+//         stage('Publicar Reportes de Seguridad') {
+//             when { branch 'master' }
+//             steps {
+//                 //                 echo '==> Archivando reportes HTML de ZAP'
+//                 //                 archiveArtifacts artifacts: 'report-*.html', fingerprint: true
+//                 echo '==> Publicando reportes HTML en interfaz Jenkins'
+//                 publishHTML([
+//                     allowMissing: false,
+//                     alwaysLinkToLastBuild: true,
+//                     keepAll: true,
+//                     reportDir: 'zap-reports',
+//                     reportFiles: 'report-*.html',
+//                     reportName: 'ZAP Security Reports',
+//                     reportTitles: 'OWASP ZAP Full Scan Results'
+//                 ])
+//             }
+//         }
 
         stage('Stop and Remove Containers') {
             when { branch 'master' }

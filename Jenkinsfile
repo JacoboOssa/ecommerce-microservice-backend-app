@@ -56,6 +56,7 @@ pipeline {
                 sh 'mvn -version'
                 sh 'docker --version'
                 sh 'kubectl config current-context'
+                sh 'gcloud --version'
             }
         }
 

@@ -460,10 +460,10 @@ pipeline {
 
                     // 1. Iniciar contenedor ZAP en la misma red
                     sh '''
-                        docker pull owasp/zap2docker-stable:latest
+                        docker pull zaproxy/zap-stable
                         docker run -dt --name zap-container --network ecommerce-test \
                             -v ${WORKSPACE}:/zap/wrk \
-                            owasp/zap2docker-stable /bin/bash
+                            zaproxy/zap-stable /bin/bash
                     '''
 
                     // 2. Definir servicios y puertos

@@ -488,8 +488,18 @@ pipeline {
         stage('Publicar Reportes de Seguridad') {
             when { branch 'master' }
             steps {
-                echo '==> Archivando reportes HTML de ZAP'
-                archiveArtifacts artifacts: 'report-*.html', fingerprint: true
+                //                 echo '==> Archivando reportes HTML de ZAP'
+                //                 archiveArtifacts artifacts: 'report-*.html', fingerprint: true
+                echo '==> Publicando reportes HTML en interfaz Jenkins'
+                publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: '.',
+                    reportFiles: 'report-*.html',
+                    reportName: 'ZAP Security Reports',
+                    reportTitles: 'OWASP ZAP Full Scan Results'
+                ])
             }
         }
 

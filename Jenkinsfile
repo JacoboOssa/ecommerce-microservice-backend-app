@@ -456,37 +456,30 @@ pipeline {
             when { branch 'master' }
             steps {
                 script {
-                    echo '==> Iniciando escaneo con OWASP ZAP'
+                    echo '==> Iniciando escaneos con OWASP ZAP'
 
-                    // 1. Iniciar contenedor ZAP en la misma red
-                    sh '''
-                        docker pull zaproxy/zap-stable
-                        docker run -dt --name zap-container --network ecommerce-test \
-                            -v ${WORKSPACE}:/zap/wrk \
-                            zaproxy/zap-stable /bin/bash
-                    '''
-
-                    // 2. Definir servicios y puertos
                     def targets = [
-                        [name: 'order-service', url: 'http://order-service-container:8300/order-service'],
-                        [name: 'payment-service', url: 'http://payment-service-container:8400/payment-service'],
-                        [name: 'product-service', url: 'http://product-service-container:8500/product-service'],
-                        [name: 'shipping-service', url: 'http://shipping-service-container:8600/shipping-service'],
-                        [name: 'user-service', url: 'http://user-service-container:8700/user-service'],
-                        [name: 'favourite-service', url: 'http://favourite-service-container:8800/favourite-service']
-                    ]
+                [name: 'order-service', url: 'http://order-service-container:8300/order-service'],
+                [name: 'payment-service', url: 'http://payment-service-container:8400/payment-service'],
+                [name: 'product-service', url: 'http://product-service-container:8500/product-service'],
+                [name: 'shipping-service', url: 'http://shipping-service-container:8600/shipping-service'],
+                [name: 'user-service', url: 'http://user-service-container:8700/user-service'],
+                [name: 'favourite-service', url: 'http://favourite-service-container:8800/favourite-service']
+            ]
 
-                    // 3. Ejecutar ZAP Full Scan a cada uno
                     targets.each { service ->
                         def reportFile = "report-${service.name}.html"
                         echo "==> Escaneando ${service.name} (${service.url})"
                         sh """
-                            docker exec zap-container \
-                            zap-full-scan.py \
-                            -t ${service.url} \
-                            -r /zap/wrk/${reportFile} \
-                            -I
-                        """
+                    docker run --rm \
+                        --network ecommerce-test \
+                        -v ${env.WORKSPACE}:/zap/wrk \
+                        zaproxy/zap-stable \
+                        zap-full-scan.py \
+                        -t ${service.url} \
+                        -r ${reportFile} \
+                        -I
+                """
                     }
                 }
             }
@@ -499,8 +492,6 @@ pipeline {
                 archiveArtifacts artifacts: 'report-*.html', fingerprint: true
             }
         }
-
-
 
         stage('Stop and Remove Containers') {
             when { branch 'master' }
@@ -519,7 +510,6 @@ pipeline {
                     docker rm -f zipkin-container || true
 
                     docker rm -f zap-container || true
-
 
                     docker network rm ecommerce-test || true
 

@@ -584,12 +584,6 @@ pipeline {
 //             }
 //         }
 
-        stage('Create namespace for deployments') {
-            when { branch 'master' }
-            steps {
-                sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
-            }
-        }
 
         stage('Authenticate to GKE') {
             when { branch 'master' }
@@ -597,6 +591,13 @@ pipeline {
                 sh "gcloud container clusters get-credentials k8s-cluster-prod --zone us-central1 --project beaming-pillar-461818-j7"
             }
         }
+
+                stage('Create namespace for deployments') {
+                    when { branch 'master' }
+                    steps {
+                        sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
+                    }
+                }
 
             stage('Deploy common config for microservices') {
                 when { branch 'master' }

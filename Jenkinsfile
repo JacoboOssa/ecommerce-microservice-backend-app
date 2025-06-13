@@ -225,15 +225,38 @@ pipeline {
 //             }
 //         }
 
-        stage('Unit Tests') {
-            when { branch 'dev' }
+//         stage('Unit Tests') {
+//             when { branch 'dev' }
+//             steps {
+//                 script {
+//                     ['user-service', 'product-service'].each {
+//                         sh "mvn test -pl ${it}"
+//                     }
+//                 }
+//                 junit '**/target/surefire-reports/*.xml'
+//             }
+//         }
+
+        stage('Unit Tests & Coverage') {
+            when { branch 'master' }
             steps {
                 script {
-                    ['user-service', 'product-service'].each {
-                        sh "mvn test -pl ${it}"
+                    ['user-service', 'product-service'].each { service ->
+                        sh "mvn clean test jacoco:report -pl ${service}"
                     }
                 }
-                junit '**/target/surefire-reports/*.xml'
+
+                publishHTML(target: [
+                    reportDir: 'user-service/target/site/jacoco',
+                    reportFiles: 'index.html',
+                    reportName: 'Cobertura user-service'
+                ])
+
+                publishHTML(target: [
+                    reportDir: 'product-service/target/site/jacoco',
+                    reportFiles: 'index.html',
+                    reportName: 'Cobertura product-service'
+                ])
             }
         }
 
@@ -479,7 +502,7 @@ pipeline {
                             zaproxy/zap-stable \
                             zap-full-scan.py \
                             -t ${service.url} \
-//                             -r ${reportFile} \
+                            //                             -r ${reportFile} \
                             -I
                         """
                     }

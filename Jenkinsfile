@@ -11,6 +11,7 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'docker_hub_pwd'
         SERVICES = 'api-gateway cloud-config favourite-service order-service payment-service product-service proxy-client service-discovery shipping-service user-service locust'
         K8S_NAMESPACE = 'ecommerce'
+        CLOUD_CORE_PROJECT ='beaming-pillar-461818-j7'
     // JAVA_HOME = tool 'JDK_17'
     // PATH = "${JAVA_HOME}/bin:${env.PATH}"
     // scannerHome = tool 'lil-sonar-tool'
@@ -589,7 +590,9 @@ pipeline {
         stage('Authenticate to GKE') {
             when { branch 'master' }
             steps {
+            withCredentials([file(credentialsId: 'gcloud-creds', variable: 'GCLOUD_CREDS')]) {
                 sh "gcloud container clusters get-credentials k8s-cluster-prod --zone us-central1 --project beaming-pillar-461818-j7"
+            }
             }
         }
 

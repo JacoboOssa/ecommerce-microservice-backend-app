@@ -12,9 +12,7 @@ pipeline {
         SERVICES = 'api-gateway cloud-config favourite-service order-service payment-service product-service proxy-client service-discovery shipping-service user-service locust'
         K8S_NAMESPACE = 'ecommerce'
         CLOUD_CORE_PROJECT ='beaming-pillar-461818-j7'
-    // JAVA_HOME = tool 'JDK_17'
-    // PATH = "${JAVA_HOME}/bin:${env.PATH}"
-    // scannerHome = tool 'lil-sonar-tool'
+        GCLOUD_PATH = '/Users/jacoboossag/Downloads/google-cloud-sdk/bin'
     }
 
     stages {

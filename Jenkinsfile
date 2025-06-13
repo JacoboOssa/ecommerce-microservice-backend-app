@@ -1,10 +1,3 @@
-def withGcloud(cmds) {
-    return """
-        export PATH=$GCLOUD_PATH:\$PATH
-        ${cmds}
-    """
-}
-
 pipeline {
     agent any
 
@@ -46,6 +39,14 @@ pipeline {
                     echo "Image tag: ${env.IMAGE_TAG}"
                     echo "Deployment suffix: ${env.DEPLOYMENT_SUFFIX}"
                     echo "Flags: IS_MASTER=${env.IS_MASTER}, IS_STAGE=${env.IS_STAGE}, IS_DEV=${env.IS_DEV}, IS_FEATURE=${env.IS_FEATURE}"
+                }
+            }
+        }
+
+        stage('Init GCLOUD SDK') {
+            steps {
+                script {
+                    env.PATH = "${env.GCLOUD_PATH}:${env.PATH}"
                 }
             }
         }

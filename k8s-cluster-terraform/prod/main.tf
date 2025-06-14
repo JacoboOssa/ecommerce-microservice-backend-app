@@ -13,12 +13,8 @@ variable "project_id" {
   default = "beaming-pillar-461818-j7"
 }
 
-resource "random_id" "default" {
-  byte_length = 8
-}
-
 resource "google_storage_bucket" "default" {
-  name     = "${random_id.default.hex}-terraform-remote-backend"
+  name     = "terraform-state-k8s-prod-${var.project_id}"
   location = "US"
   project  = var.project_id
 
@@ -35,27 +31,11 @@ resource "google_storage_bucket" "default" {
     module.prod_cluster
   ]
 
-  # Uncomment this to prevent accidental deletion of the state bucket
-  # lifecycle {
-  #   prevent_destroy = true
-  # }
-}
-
-resource "local_file" "default" {
-  file_permission = "0644"
-  filename        = "${path.module}/backend.tf"
-
-  content = <<-EOT
-  terraform {
-    backend "gcs" {
-      bucket = "${google_storage_bucket.default.name}"
-    }
+  # Prevent accidental deletion of the state bucket
+  lifecycle {
+    prevent_destroy = true
   }
-  EOT
-
-  # Ensure the backend file is created BEFORE other resources
-  # and destroyed AFTER other resources
-  depends_on = [
-    module.prod_cluster
-  ]
 }
+
+# Backend configuration is now in backend.tf file
+# No need for dynamic generation

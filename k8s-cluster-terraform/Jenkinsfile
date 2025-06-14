@@ -106,6 +106,38 @@ pipeline {
             }
         }
         
+        stage('Check for State Conflicts') {
+            when {
+                anyOf {
+                    expression { params.ACTION == 'plan' }
+                    expression { params.ACTION == 'apply' }
+                }
+            }
+            steps {
+                dir('k8s-cluster-terraform/prod') {
+                    script {
+                        sh '''
+                            echo "🔍 Checking for potential state conflicts..."
+                            
+                            # Verificar si hay node pools existentes en GCP
+                            echo "Checking existing node pools in GCP..."
+                            gcloud container node-pools list \
+                                --cluster=k8s-cluster-prod \
+                                --region=us-central1 \
+                                --project=$TF_VAR_project_id \
+                                --format="value(name)" || echo "No existing node pools or cluster not found"
+                            
+                            # Verificar estado de Terraform
+                            echo "Checking Terraform state..."
+                            terraform state list | grep node_pool || echo "No node pools in Terraform state"
+                            
+                            echo "✅ State conflict check completed"
+                        '''
+                    }
+                }
+            }
+        }
+        
         stage('Terraform Plan') {
             when {
                 anyOf {

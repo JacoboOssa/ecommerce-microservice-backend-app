@@ -22,7 +22,6 @@ resource "google_storage_bucket" "default" {
   location = "US"
   project  = var.project_id
 
-
   force_destroy               = true
   public_access_prevention    = "enforced"
   uniform_bucket_level_access = true
@@ -30,12 +29,21 @@ resource "google_storage_bucket" "default" {
   versioning {
     enabled = true
   }
+
+  # Ensure the bucket is destroyed AFTER all other resources
+  depends_on = [
+    module.prod_cluster
+  ]
+
+  # Uncomment this to prevent accidental deletion of the state bucket
+  # lifecycle {
+  #   prevent_destroy = true
+  # }
 }
 
 resource "local_file" "default" {
   file_permission = "0644"
   filename        = "${path.module}/backend.tf"
-
 
   content = <<-EOT
   terraform {
@@ -44,4 +52,10 @@ resource "local_file" "default" {
     }
   }
   EOT
+
+  # Ensure the backend file is created BEFORE other resources
+  # and destroyed AFTER other resources
+  depends_on = [
+    module.prod_cluster
+  ]
 }

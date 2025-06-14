@@ -69,6 +69,10 @@ module "gke" {
   ip_range_pods          = var.ip_range_pods_name
   ip_range_services      = var.ip_range_services_name
   
+  # Disable node pool management to avoid unwanted changes
+  remove_default_node_pool = true
+  initial_node_count       = 1
+  
   node_pools = [
     {
       name                      = "node-pool"
@@ -77,6 +81,11 @@ module "gke" {
       min_count                 = var.min_count
       max_count                 = var.max_count
       disk_size_gb              = 30
+      disk_type                 = "pd-standard"
+      image_type                = "COS_CONTAINERD"
+      auto_repair               = true
+      auto_upgrade              = true
+      preemptible               = false
     }
   ]
 }

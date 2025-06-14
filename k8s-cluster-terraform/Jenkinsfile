@@ -82,7 +82,7 @@ pipeline {
         
         stage('Terraform Init') {
             steps {
-                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                dir('k8s-cluster-terraform/prod') {
                     script {
                         sh '''
                             echo "Current directory: $(pwd)"
@@ -99,7 +99,7 @@ pipeline {
         
         stage('Terraform Validate') {
             steps {
-                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                dir('k8s-cluster-terraform/prod') {
                     sh '''
                         echo "Validating Terraform configuration..."
                         terraform validate
@@ -116,7 +116,7 @@ pipeline {
                 }
             }
             steps {
-                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                dir('k8s-cluster-terraform/prod') {
                     script {
                         sh '''
                             echo "Creating Terraform plan..."
@@ -139,7 +139,7 @@ pipeline {
                 expression { params.ACTION == 'apply' }
             }
             steps {
-                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                dir('k8s-cluster-terraform/prod') {
                     script {
                         if (params.AUTO_APPROVE) {
                             sh '''
@@ -167,7 +167,7 @@ pipeline {
                 expression { params.ACTION == 'destroy' }
             }
             steps {
-                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                dir('k8s-cluster-terraform/prod') {
                     script {
                         sh '''
                             echo "Creating Terraform destroy plan..."
@@ -189,7 +189,7 @@ pipeline {
                 expression { params.ACTION == 'destroy' }
             }
             steps {
-                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                dir('k8s-cluster-terraform/prod') {
                     script {
                         if (params.AUTO_APPROVE) {
                             sh '''
@@ -217,7 +217,7 @@ pipeline {
                 expression { params.ACTION == 'apply' }
             }
             steps {
-                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                dir('k8s-cluster-terraform/prod') {
                     script {
                         sh '''
                             echo "Checking for kubeconfig..."
@@ -245,7 +245,7 @@ pipeline {
                 expression { params.ACTION == 'apply' }
             }
             steps {
-                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                dir('k8s-cluster-terraform/prod') {
                     script {
                         sh '''
                             echo "=== Terraform Outputs ==="

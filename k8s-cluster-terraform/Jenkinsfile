@@ -118,13 +118,25 @@ pipeline {
             steps {
                 dir('k8s-cluster-terraform/prod') {
                     script {
-                        sh '''
-                            echo "Creating Terraform plan..."
-                            terraform plan \
-                                -var="project_id=$TF_VAR_project_id" \
-                                -out=tfplan-${BUILD_TIMESTAMP} \
-                                -detailed-exitcode
-                        '''
+                        def planExitCode = sh(
+                            script: '''
+                                echo "Creating Terraform plan..."
+                                terraform plan \
+                                    -var="project_id=$TF_VAR_project_id" \
+                                    -out=tfplan-${BUILD_TIMESTAMP} \
+                                    -detailed-exitcode
+                            ''',
+                            returnStatus: true
+                        )
+                        
+                        // Handle Terraform plan exit codes
+                        if (planExitCode == 0) {
+                            echo "✅ No changes needed"
+                        } else if (planExitCode == 2) {
+                            echo "✅ Changes detected and planned successfully"
+                        } else {
+                            error "❌ Terraform plan failed with exit code: ${planExitCode}"
+                        }
                         
                         // Archive the plan file
                         archiveArtifacts artifacts: "tfplan-${env.BUILD_TIMESTAMP}", 
@@ -169,12 +181,25 @@ pipeline {
             steps {
                 dir('k8s-cluster-terraform/prod') {
                     script {
-                        sh '''
-                            echo "Creating Terraform destroy plan..."
-                            terraform plan -destroy \
-                                -var="project_id=$TF_VAR_project_id" \
-                                -out=destroy-plan-${BUILD_TIMESTAMP}
-                        '''
+                        def destroyPlanExitCode = sh(
+                            script: '''
+                                echo "Creating Terraform destroy plan..."
+                                terraform plan -destroy \
+                                    -var="project_id=$TF_VAR_project_id" \
+                                    -out=destroy-plan-${BUILD_TIMESTAMP} \
+                                    -detailed-exitcode
+                            ''',
+                            returnStatus: true
+                        )
+                        
+                        // Handle Terraform destroy plan exit codes
+                        if (destroyPlanExitCode == 0) {
+                            echo "✅ No resources to destroy"
+                        } else if (destroyPlanExitCode == 2) {
+                            echo "✅ Destroy plan created successfully"
+                        } else {
+                            error "❌ Terraform destroy plan failed with exit code: ${destroyPlanExitCode}"
+                        }
                         
                         // Archive the destroy plan
                         archiveArtifacts artifacts: "destroy-plan-${env.BUILD_TIMESTAMP}", 

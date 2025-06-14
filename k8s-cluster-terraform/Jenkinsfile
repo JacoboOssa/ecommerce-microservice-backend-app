@@ -1,0 +1,279 @@
+pipeline {
+    agent any
+    
+    environment {
+        GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-service-account')
+        TF_VAR_project_id = 'beaming-pillar-461818-j7'
+        TF_IN_AUTOMATION = 'true'
+        TF_INPUT = 'false'
+        PATH = "${env.PATH}:/opt/homebrew/bin"
+    }
+    
+    parameters {
+        choice(
+            name: 'ACTION',
+            choices: ['plan', 'apply', 'destroy'],
+            description: 'Select Terraform action to perform'
+        )
+        booleanParam(
+            name: 'AUTO_APPROVE',
+            defaultValue: false,
+            description: 'Auto approve Terraform apply/destroy (use with caution in production)'
+        )
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    env.BUILD_TIMESTAMP = sh(
+                        script: 'date +"%Y%m%d-%H%M%S"',
+                        returnStdout: true
+                    ).trim()
+                }
+            }
+        }
+        
+        stage('Setup Environment') {
+            steps {
+                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                    script {
+                        sh '''
+                            echo "Setting up environment..."
+                            
+                            # Verificar herramientas
+                            gcloud version
+                            terraform version
+                            
+                            # Autenticar con Google Cloud (sin verificaciones adicionales)
+                            gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+                            gcloud config set project $TF_VAR_project_id
+                            
+                            # Verificar autenticación básica
+                            gcloud auth list
+                            
+                            echo "✅ Environment setup complete"
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Terraform Init') {
+            steps {
+                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                    script {
+                        sh '''
+                            echo "Initializing Terraform..."
+                            terraform init -reconfigure
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Terraform Validate') {
+            steps {
+                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                    sh '''
+                        echo "Validating Terraform configuration..."
+                        terraform validate
+                    '''
+                }
+            }
+        }
+        
+        stage('Terraform Plan') {
+            when {
+                anyOf {
+                    params.ACTION == 'plan'
+                    params.ACTION == 'apply'
+                }
+            }
+            steps {
+                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                    script {
+                        sh '''
+                            echo "Creating Terraform plan..."
+                            terraform plan \
+                                -var="project_id=$TF_VAR_project_id" \
+                                -out=tfplan-${BUILD_TIMESTAMP} \
+                                -detailed-exitcode
+                        '''
+                        
+                        // Archive the plan file
+                        archiveArtifacts artifacts: "tfplan-${env.BUILD_TIMESTAMP}", 
+                                       allowEmptyArchive: false
+                    }
+                }
+            }
+        }
+        
+        stage('Terraform Apply') {
+            when {
+                params.ACTION == 'apply'
+            }
+            steps {
+                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                    script {
+                        if (params.AUTO_APPROVE) {
+                            sh '''
+                                echo "Applying Terraform changes with auto-approve..."
+                                terraform apply -auto-approve tfplan-${BUILD_TIMESTAMP}
+                            '''
+                        } else {
+                            timeout(time: 10, unit: 'MINUTES') {
+                                input message: 'Approve Terraform Apply?', 
+                                      ok: 'Apply',
+                                      submitterParameter: 'APPROVER'
+                            }
+                            sh '''
+                                echo "Applying Terraform changes..."
+                                terraform apply tfplan-${BUILD_TIMESTAMP}
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Terraform Destroy Plan') {
+            when {
+                params.ACTION == 'destroy'
+            }
+            steps {
+                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                    script {
+                        sh '''
+                            echo "Creating Terraform destroy plan..."
+                            terraform plan -destroy \
+                                -var="project_id=$TF_VAR_project_id" \
+                                -out=destroy-plan-${BUILD_TIMESTAMP}
+                        '''
+                        
+                        // Archive the destroy plan
+                        archiveArtifacts artifacts: "destroy-plan-${env.BUILD_TIMESTAMP}", 
+                                       allowEmptyArchive: false
+                    }
+                }
+            }
+        }
+        
+        stage('Terraform Destroy') {
+            when {
+                params.ACTION == 'destroy'
+            }
+            steps {
+                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                    script {
+                        if (params.AUTO_APPROVE) {
+                            sh '''
+                                echo "Destroying infrastructure with auto-approve..."
+                                terraform apply -auto-approve destroy-plan-${BUILD_TIMESTAMP}
+                            '''
+                        } else {
+                            timeout(time: 10, unit: 'MINUTES') {
+                                input message: 'Approve Terraform Destroy? This will DELETE all infrastructure!', 
+                                      ok: 'Destroy',
+                                      submitterParameter: 'APPROVER'
+                            }
+                            sh '''
+                                echo "Destroying infrastructure..."
+                                terraform apply destroy-plan-${BUILD_TIMESTAMP}
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Generate Kubeconfig') {
+            when {
+                params.ACTION == 'apply'
+            }
+            steps {
+                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                    script {
+                        sh '''
+                            echo "Checking for kubeconfig..."
+                            if [ -f kubeconfig-prod ]; then
+                                echo "Kubeconfig generated successfully"
+                                
+                                # Test cluster connectivity (opcional)
+                                export KUBECONFIG=./kubeconfig-prod
+                                kubectl cluster-info --request-timeout=30s || echo "Cluster not ready yet, but kubeconfig exists"
+                            else
+                                echo "Warning: kubeconfig-prod not found"
+                            fi
+                        '''
+                        
+                        // Archive kubeconfig if it exists
+                        archiveArtifacts artifacts: 'kubeconfig-prod', 
+                                       allowEmptyArchive: true
+                    }
+                }
+            }
+        }
+        
+        stage('Terraform Output') {
+            when {
+                params.ACTION == 'apply'
+            }
+            steps {
+                dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                    script {
+                        sh '''
+                            echo "=== Terraform Outputs ==="
+                            terraform output || echo "No outputs available"
+                        '''
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Clean up plan files
+            dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+                sh '''
+                    echo "Cleaning up temporary files..."
+                    rm -f tfplan-* destroy-plan-*
+                '''
+            }
+        }
+        success {
+            script {
+                def message = """
+                ✅ **Terraform ${params.ACTION} completed successfully**
+                
+                **Build Details:**
+                - Job: ${env.JOB_NAME}
+                - Build: #${env.BUILD_NUMBER}
+                - Action: ${params.ACTION}
+                - Project: ${env.TF_VAR_project_id}
+                - Timestamp: ${env.BUILD_TIMESTAMP}
+                """
+                
+                echo message
+            }
+        }
+        failure {
+            script {
+                def message = """
+                ❌ **Terraform ${params.ACTION} failed**
+                
+                **Build Details:**
+                - Job: ${env.JOB_NAME}
+                - Build: #${env.BUILD_NUMBER}
+                - Action: ${params.ACTION}
+                - Project: ${env.TF_VAR_project_id}
+                - Console: ${env.BUILD_URL}console
+                """
+                
+                echo message
+            }
+        }
+    }
+}

@@ -71,23 +71,29 @@ module "gke" {
   
   # Match current state to avoid conflicts
   remove_default_node_pool = true
-  initial_node_count       = 3  # Match current state
+  initial_node_count       = 3
   
   node_pools = [
     {
       name                      = "node-pool"
-      machine_type              = "n2-highmem-2"  # Match current state
+      machine_type              = "n2-highmem-2"
       node_locations            = "us-central1-a"
-      min_count                 = 3  # Match current state
-      max_count                 = 5  # Match current state
+      min_count                 = 3
+      max_count                 = 5
       disk_size_gb              = 30
       disk_type                 = "pd-standard"
       image_type                = "COS_CONTAINERD"
       auto_repair               = true
       auto_upgrade              = true
       preemptible               = false
-      # Add version to match current state
-      version                   = "1.33.1-gke.1386000"
     }
   ]
+  
+  # Configure node pool labels to match current state
+  node_pools_labels = {
+    node-pool = {
+      cluster_name = "${var.cluster_name}-${var.env_name}"
+      node_pool    = "node-pool"
+    }
+  }
 }

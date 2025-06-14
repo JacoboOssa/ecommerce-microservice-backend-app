@@ -90,7 +90,7 @@ pipeline {
                             ls -la
                             
                             echo "Initializing Terraform..."
-                            terraform init
+                            terraform init -reconfigure
                         '''
                     }
                 }

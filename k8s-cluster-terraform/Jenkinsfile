@@ -58,27 +58,27 @@ pipeline {
             }
         }
         
-        stage('Verify Terraform Structure') {
-            steps {
-                script {
-                    sh '''
-                        echo "=== Verifying Terraform structure ==="
-                        echo "Current directory: $(pwd)"
-                        echo "Listing workspace contents:"
-                        ls -la
+        // stage('Verify Terraform Structure') {
+        //     steps {
+        //         script {
+        //             sh '''
+        //                 echo "=== Verifying Terraform structure ==="
+        //                 echo "Current directory: $(pwd)"
+        //                 echo "Listing workspace contents:"
+        //                 ls -la
                         
-                        echo "Checking k8s-cluster-terraform directory:"
-                        ls -la k8s-cluster-terraform/
+        //                 echo "Checking k8s-cluster-terraform directory:"
+        //                 ls -la k8s-cluster-terraform/
                         
-                        echo "Checking prod directory:"
-                        ls -la k8s-cluster-terraform/prod/
+        //                 echo "Checking prod directory:"
+        //                 ls -la k8s-cluster-terraform/prod/
                         
-                        echo "Checking main directory:"
-                        ls -la k8s-cluster-terraform/main/
-                    '''
-                }
-            }
-        }
+        //                 echo "Checking main directory:"
+        //                 ls -la k8s-cluster-terraform/main/
+        //             '''
+        //         }
+        //     }
+        // }
         
         stage('Terraform Init') {
             steps {
@@ -86,8 +86,6 @@ pipeline {
                     script {
                         sh '''
                             echo "Current directory: $(pwd)"
-                            echo "Contents of current directory:"
-                            ls -la
                             
                             echo "Initializing Terraform..."
                             terraform init || terraform init -reconfigure

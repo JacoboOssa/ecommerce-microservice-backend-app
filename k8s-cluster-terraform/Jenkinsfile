@@ -58,28 +58,6 @@ pipeline {
             }
         }
         
-        // stage('Verify Terraform Structure') {
-        //     steps {
-        //         script {
-        //             sh '''
-        //                 echo "=== Verifying Terraform structure ==="
-        //                 echo "Current directory: $(pwd)"
-        //                 echo "Listing workspace contents:"
-        //                 ls -la
-                        
-        //                 echo "Checking k8s-cluster-terraform directory:"
-        //                 ls -la k8s-cluster-terraform/
-                        
-        //                 echo "Checking prod directory:"
-        //                 ls -la k8s-cluster-terraform/prod/
-                        
-        //                 echo "Checking main directory:"
-        //                 ls -la k8s-cluster-terraform/main/
-        //             '''
-        //         }
-        //     }
-        // }
-        
         stage('Terraform Init') {
             steps {
                 dir('k8s-cluster-terraform/prod') {
@@ -311,6 +289,146 @@ pipeline {
                             terraform output || echo "No outputs available"
                         '''
                     }
+                }
+            }
+        }
+        
+        stage('Deploy ELK Stack') {
+            when {
+                expression { params.ACTION == 'apply' }
+            }
+            steps {
+                script {
+                    sh '''
+                        echo "🔍 Checking ELK Stack deployment status..."
+                        
+                        # Set kubeconfig
+                        export KUBECONFIG=k8s-cluster-terraform/prod/kubeconfig-prod
+                        
+                        # Verify cluster connectivity
+                        kubectl cluster-info --request-timeout=30s
+                        
+                        # Function to check if a Helm release exists and is deployed
+                        check_helm_release() {
+                            local release_name=$1
+                            local namespace=$2
+                            
+                            if /opt/homebrew/bin/helm list -n $namespace | grep -q "^$release_name\\s"; then
+                                local status=$(/opt/homebrew/bin/helm list -n $namespace | grep "^$release_name\\s" | awk '{print $8}')
+                                if [ "$status" = "deployed" ]; then
+                                    echo "✅ $release_name is already deployed and running"
+                                    return 0
+                                else
+                                    echo "⚠️  $release_name exists but status is: $status"
+                                    return 1
+                                fi
+                            else
+                                echo "❌ $release_name is not deployed"
+                                return 1
+                            fi
+                        }
+                        
+                        # Function to check if pods are running
+                        check_pods_running() {
+                            local app_label=$1
+                            local namespace=$2
+                            local min_pods=${3:-1}
+                            
+                            local running_pods=$(kubectl get pods -n $namespace -l app=$app_label --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)
+                            if [ "$running_pods" -ge "$min_pods" ]; then
+                                echo "✅ $app_label has $running_pods running pods"
+                                return 0
+                            else
+                                echo "❌ $app_label has only $running_pods running pods (minimum: $min_pods)"
+                                return 1
+                            fi
+                        }
+                        
+                        # Create namespace for ELK if it doesn't exist
+                        kubectl create namespace elk || echo "Namespace elk already exists"
+                        
+                        # Add Elastic Helm repository
+                        /opt/homebrew/bin/helm repo add elastic https://helm.elastic.co
+                        /opt/homebrew/bin/helm repo update
+                        
+                        # Check each component
+                        ELASTICSEARCH_DEPLOYED=false
+                        KIBANA_DEPLOYED=false
+                        LOGSTASH_DEPLOYED=false
+                        FILEBEAT_DEPLOYED=false
+                        
+                        echo "🔍 Checking Elasticsearch..."
+                        if check_helm_release "elasticsearch" "elk" && check_pods_running "elasticsearch-master" "elk" 1; then
+                            ELASTICSEARCH_DEPLOYED=true
+                        fi
+                        
+                        echo "🔍 Checking Kibana..."
+                        if check_helm_release "kibana" "elk" && check_pods_running "kibana" "elk" 1; then
+                            KIBANA_DEPLOYED=true
+                        fi
+                        
+                        echo "🔍 Checking Logstash..."
+                        if check_helm_release "logstash" "elk" && check_pods_running "logstash" "elk" 1; then
+                            LOGSTASH_DEPLOYED=true
+                        fi
+                        
+                        echo "🔍 Checking Filebeat..."
+                        if check_helm_release "filebeat" "elk" && check_pods_running "filebeat" "elk" 1; then
+                            FILEBEAT_DEPLOYED=true
+                        fi
+                        
+                        # Deploy only missing components
+                        if [ "$ELASTICSEARCH_DEPLOYED" = "false" ]; then
+                            echo "📊 Installing/Upgrading Elasticsearch..."
+                            /opt/homebrew/bin/helm upgrade --install elasticsearch elastic/elasticsearch \\
+                                --namespace elk \\
+                                --values elk/elasticsearch-values.yaml \\
+                                --wait --timeout=10m
+                        else
+                            echo "⏭️  Elasticsearch already deployed, skipping..."
+                        fi
+                        
+                        if [ "$KIBANA_DEPLOYED" = "false" ]; then
+                            echo "📈 Installing/Upgrading Kibana..."
+                            /opt/homebrew/bin/helm upgrade --install kibana elastic/kibana \\
+                                --namespace elk \\
+                                --values elk/kibana-values.yaml \\
+                                --wait --timeout=10m
+                        else
+                            echo "⏭️  Kibana already deployed, skipping..."
+                        fi
+                        
+                        if [ "$LOGSTASH_DEPLOYED" = "false" ]; then
+                            echo "🔄 Installing/Upgrading Logstash..."
+                            /opt/homebrew/bin/helm upgrade --install logstash elastic/logstash \\
+                                --namespace elk \\
+                                --values elk/logstash-values.yaml \\
+                                --wait --timeout=10m
+                        else
+                            echo "⏭️  Logstash already deployed, skipping..."
+                        fi
+                        
+                        if [ "$FILEBEAT_DEPLOYED" = "false" ]; then
+                            echo "📋 Installing/Upgrading Filebeat..."
+                            /opt/homebrew/bin/helm upgrade --install filebeat elastic/filebeat \\
+                                --namespace elk \\
+                                --values elk/filebeat-values.yaml \\
+                                --wait --timeout=10m
+                        else
+                            echo "⏭️  Filebeat already deployed, skipping..."
+                        fi
+                        
+                        echo "✅ ELK Stack validation and deployment completed!"
+                        
+                        echo "📋 Final ELK Stack Status:"
+                        kubectl get pods -n elk
+                        kubectl get services -n elk
+                        
+                        echo ""
+                        echo "🔗 To access Kibana, run the following command after the pipeline:"
+                        echo "kubectl port-forward -n elk service/kibana-kibana 5601:5601"
+                        echo "Then open: http://localhost:5601"
+                    '''
                 }
             }
         }

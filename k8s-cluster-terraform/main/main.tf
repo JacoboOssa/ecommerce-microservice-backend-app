@@ -69,17 +69,17 @@ module "gke" {
   ip_range_pods          = var.ip_range_pods_name
   ip_range_services      = var.ip_range_services_name
   
-  # Match current state to avoid conflicts
+  # Configuración corregida para evitar conflictos
   remove_default_node_pool = true
-  initial_node_count       = 3
+  initial_node_count       = 1  # Reducido para evitar conflictos
   
   node_pools = [
     {
-      name                      = "node-pool"
-      machine_type              = "n2-highmem-2"
+      name                      = "primary-node-pool"  # Nombre cambiado para evitar conflictos
+      machine_type              = var.instance_type
       node_locations            = "us-central1-a"
-      min_count                 = 3
-      max_count                 = 5
+      min_count                 = var.min_count
+      max_count                 = var.max_count
       disk_size_gb              = 30
       disk_type                 = "pd-standard"
       image_type                = "COS_CONTAINERD"
@@ -91,9 +91,16 @@ module "gke" {
   
   # Configure node pool labels to match current state
   node_pools_labels = {
-    node-pool = {
+    primary-node-pool = {
       cluster_name = "${var.cluster_name}-${var.env_name}"
-      node_pool    = "node-pool"
+      node_pool    = "primary-node-pool"
+    }
+  }
+  
+  # Agregar configuración de lifecycle para evitar conflictos
+  node_pools_metadata = {
+    primary-node-pool = {
+      disable-legacy-endpoints = "true"
     }
   }
 }

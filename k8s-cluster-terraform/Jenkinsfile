@@ -68,13 +68,13 @@ pipeline {
                         ls -la
                         
                         echo "Checking k8s-cluster-terraform directory:"
-                        ls -la ecommerce-microservice-backend-app/k8s-cluster-terraform/
+                        ls -la k8s-cluster-terraform/
                         
                         echo "Checking prod directory:"
-                        ls -la ecommerce-microservice-backend-app/k8s-cluster-terraform/prod/
+                        ls -la k8s-cluster-terraform/prod/
                         
                         echo "Checking main directory:"
-                        ls -la ecommerce-microservice-backend-app/k8s-cluster-terraform/main/
+                        ls -la k8s-cluster-terraform/main/
                     '''
                 }
             }

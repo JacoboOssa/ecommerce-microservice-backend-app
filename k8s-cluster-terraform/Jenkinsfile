@@ -87,11 +87,12 @@ pipeline {
                         sh '''
                             echo "Current directory: $(pwd)"
                             
-                            echo "Cleaning up old Terraform files..."
-                            rm -rf .terraform .terraform.lock.hcl
-                            
-                            echo "Initializing Terraform with upgrade..."
-                            terraform init -upgrade
+                            echo "Initializing Terraform..."
+                            if ! terraform init; then
+                                echo "Standard init failed, trying with upgrade..."
+                                rm -rf .terraform .terraform.lock.hcl
+                                terraform init -upgrade
+                            fi
                         '''
                     }
                 }

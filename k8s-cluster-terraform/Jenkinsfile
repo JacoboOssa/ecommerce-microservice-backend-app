@@ -46,7 +46,7 @@ pipeline {
                             gcloud version
                             terraform version
                             
-                            # Autenticar con Google Cloud (sin verificaciones adicionales)
+                            # Autenticar con Google Cloud
                             gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
                             gcloud config set project $TF_VAR_project_id
                             
@@ -87,8 +87,8 @@ pipeline {
         stage('Terraform Plan') {
             when {
                 anyOf {
-                    params.ACTION == 'plan'
-                    params.ACTION == 'apply'
+                    expression { params.ACTION == 'plan' }
+                    expression { params.ACTION == 'apply' }
                 }
             }
             steps {
@@ -112,7 +112,7 @@ pipeline {
         
         stage('Terraform Apply') {
             when {
-                params.ACTION == 'apply'
+                expression { params.ACTION == 'apply' }
             }
             steps {
                 dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
@@ -140,7 +140,7 @@ pipeline {
         
         stage('Terraform Destroy Plan') {
             when {
-                params.ACTION == 'destroy'
+                expression { params.ACTION == 'destroy' }
             }
             steps {
                 dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
@@ -162,7 +162,7 @@ pipeline {
         
         stage('Terraform Destroy') {
             when {
-                params.ACTION == 'destroy'
+                expression { params.ACTION == 'destroy' }
             }
             steps {
                 dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
@@ -190,7 +190,7 @@ pipeline {
         
         stage('Generate Kubeconfig') {
             when {
-                params.ACTION == 'apply'
+                expression { params.ACTION == 'apply' }
             }
             steps {
                 dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
@@ -218,7 +218,7 @@ pipeline {
         
         stage('Terraform Output') {
             when {
-                params.ACTION == 'apply'
+                expression { params.ACTION == 'apply' }
             }
             steps {
                 dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {

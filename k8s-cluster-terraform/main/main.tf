@@ -2,14 +2,14 @@ terraform {
   required_providers {
     google = {
       source = "hashicorp/google"
-      version = "4.47.0"
+      version = "~> 5.0"
     }
   }
 }
 
 module "gke_auth" {
   source = "terraform-google-modules/kubernetes-engine/google//modules/auth"
-  version = "24.1.0"
+  version = "~> 29.0"
   depends_on   = [module.gke]
   project_id   = var.project_id
   location     = module.gke.location
@@ -23,7 +23,7 @@ resource "local_file" "kubeconfig" {
 
 module "gcp-network" {
   source       = "terraform-google-modules/network/google"
-  version      = "6.0.0"
+  version      = "~> 9.0"
   project_id   = var.project_id
   network_name = "${var.network}-${var.env_name}"
 
@@ -59,7 +59,7 @@ provider "kubernetes" {
 
 module "gke" {
   source                 = "terraform-google-modules/kubernetes-engine/google//modules/private-cluster"
-  version                = "24.1.0"
+  version                = "~> 29.0"
   project_id             = var.project_id
   name                   = "${var.cluster_name}-${var.env_name}"
   regional               = true
@@ -69,38 +69,26 @@ module "gke" {
   ip_range_pods          = var.ip_range_pods_name
   ip_range_services      = var.ip_range_services_name
   
-  # Configuración corregida para evitar conflictos
+  # Configuración simplificada para evitar conflictos
   remove_default_node_pool = true
-  initial_node_count       = 1  # Reducido para evitar conflictos
+  initial_node_count       = 0
   
   node_pools = [
     {
-      name                      = "primary-node-pool"  # Nombre cambiado para evitar conflictos
-      machine_type              = var.instance_type
-      node_locations            = "us-central1-a"
-      min_count                 = var.min_count
-      max_count                 = var.max_count
-      disk_size_gb              = 30
-      disk_type                 = "pd-standard"
-      image_type                = "COS_CONTAINERD"
-      auto_repair               = true
-      auto_upgrade              = true
-      preemptible               = false
+      name               = "primary-node-pool"
+      machine_type       = var.instance_type
+      min_count          = var.min_count
+      max_count          = var.max_count
+      local_ssd_count    = 0
+      spot               = false
+      disk_size_gb       = 30
+      disk_type          = "pd-standard"
+      image_type         = "COS_CONTAINERD"
+      enable_gcfs        = false
+      enable_gvnic       = false
+      auto_repair        = true
+      auto_upgrade       = true
+      preemptible        = false
     }
   ]
-  
-  # Configure node pool labels to match current state
-  node_pools_labels = {
-    primary-node-pool = {
-      cluster_name = "${var.cluster_name}-${var.env_name}"
-      node_pool    = "primary-node-pool"
-    }
-  }
-  
-  # Agregar configuración de lifecycle para evitar conflictos
-  node_pools_metadata = {
-    primary-node-pool = {
-      disable-legacy-endpoints = "true"
-    }
-  }
 }

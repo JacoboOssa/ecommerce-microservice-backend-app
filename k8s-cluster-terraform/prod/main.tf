@@ -13,29 +13,6 @@ variable "project_id" {
   default = "beaming-pillar-461818-j7"
 }
 
-resource "google_storage_bucket" "default" {
-  name     = "terraform-state-k8s-prod-${var.project_id}"
-  location = "US"
-  project  = var.project_id
-
-  force_destroy               = true
-  public_access_prevention    = "enforced"
-  uniform_bucket_level_access = true
-
-  versioning {
-    enabled = true
-  }
-
-  # Ensure the bucket is destroyed AFTER all other resources
-  depends_on = [
-    module.prod_cluster
-  ]
-
-  # Prevent accidental deletion of the state bucket
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-# Backend configuration is now in backend.tf file
-# No need for dynamic generation
+# State bucket is managed externally (created manually)
+# This follows best practices and avoids circular dependency issues
+# Run setup-backend.sh once before using this Terraform configuration

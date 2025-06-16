@@ -11,6 +11,11 @@ pipeline {
     
     parameters {
         choice(
+            name: 'ENVIRONMENT',
+            choices: ['prod', 'stage'],
+            description: 'Select environment to deploy (prod or stage)'
+        )
+        choice(
             name: 'ACTION',
             choices: ['plan', 'apply', 'destroy'],
             description: 'Select Terraform action to perform'
@@ -31,6 +36,15 @@ pipeline {
                         script: 'date +"%Y%m%d-%H%M%S"',
                         returnStdout: true
                     ).trim()
+                    
+                    // Set environment-specific variables
+                    env.TF_WORKSPACE_DIR = "k8s-cluster-terraform/${params.ENVIRONMENT}"
+                    env.CLUSTER_NAME = "k8s-cluster-${params.ENVIRONMENT}"
+                    env.NETWORK_NAME = "gke-network-${params.ENVIRONMENT}"
+                    
+                    echo "🚀 Deploying to: ${params.ENVIRONMENT}"
+                    echo "📁 Working directory: ${env.TF_WORKSPACE_DIR}"
+                    echo "🎯 Cluster name: ${env.CLUSTER_NAME}"
                 }
             }
         }
@@ -39,7 +53,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        echo "Setting up environment..."
+                        echo "Setting up environment for ${ENVIRONMENT}..."
                         
                         # Verificar herramientas
                         gcloud version
@@ -52,7 +66,7 @@ pipeline {
                         # Verificar autenticación básica
                         gcloud auth list
                         
-                        echo "✅ Environment setup complete"
+                        echo "✅ Environment setup complete for ${ENVIRONMENT}"
                     '''
                 }
             }
@@ -60,12 +74,12 @@ pipeline {
         
         stage('Terraform Init') {
             steps {
-                dir('k8s-cluster-terraform/prod') {
+                dir("${env.TF_WORKSPACE_DIR}") {
                     script {
                         sh '''
                             echo "Current directory: $(pwd)"
+                            echo "Initializing Terraform for ${ENVIRONMENT} environment..."
                             
-                            echo "Initializing Terraform..."
                             if ! terraform init; then
                                 echo "Standard init failed, trying with upgrade..."
                                 rm -rf .terraform .terraform.lock.hcl
@@ -79,9 +93,9 @@ pipeline {
         
         stage('Terraform Validate') {
             steps {
-                dir('k8s-cluster-terraform/prod') {
+                dir("${env.TF_WORKSPACE_DIR}") {
                     sh '''
-                        echo "Validating Terraform configuration..."
+                        echo "Validating Terraform configuration for ${ENVIRONMENT}..."
                         terraform validate
                     '''
                 }
@@ -96,15 +110,15 @@ pipeline {
                 }
             }
             steps {
-                dir('k8s-cluster-terraform/prod') {
+                dir("${env.TF_WORKSPACE_DIR}") {
                     script {
                         sh '''
-                            echo "🔍 Checking for potential state conflicts..."
+                            echo "🔍 Checking for potential state conflicts in ${ENVIRONMENT}..."
                             
                             # Verificar si hay node pools existentes en GCP
-                            echo "Checking existing node pools in GCP..."
+                            echo "Checking existing node pools in GCP for ${CLUSTER_NAME}..."
                             gcloud container node-pools list \
-                                --cluster=k8s-cluster-prod \
+                                --cluster=${CLUSTER_NAME} \
                                 --region=us-central1 \
                                 --project=$TF_VAR_project_id \
                                 --format="value(name)" || echo "No existing node pools or cluster not found"
@@ -113,7 +127,7 @@ pipeline {
                             echo "Checking Terraform state..."
                             terraform state list | grep node_pool || echo "No node pools in Terraform state"
                             
-                            echo "✅ State conflict check completed"
+                            echo "✅ State conflict check completed for ${ENVIRONMENT}"
                         '''
                     }
                 }
@@ -128,14 +142,14 @@ pipeline {
                 }
             }
             steps {
-                dir('k8s-cluster-terraform/prod') {
+                dir("${env.TF_WORKSPACE_DIR}") {
                     script {
                         def planExitCode = sh(
                             script: '''
-                                echo "Creating Terraform plan..."
+                                echo "Creating Terraform plan for ${ENVIRONMENT}..."
                                 terraform plan \
                                     -var="project_id=$TF_VAR_project_id" \
-                                    -out=tfplan-${BUILD_TIMESTAMP} \
+                                    -out=tfplan-${ENVIRONMENT}-${BUILD_TIMESTAMP} \
                                     -detailed-exitcode
                             ''',
                             returnStatus: true
@@ -143,15 +157,15 @@ pipeline {
                         
                         // Handle Terraform plan exit codes
                         if (planExitCode == 0) {
-                            echo "✅ No changes needed"
+                            echo "✅ No changes needed for ${params.ENVIRONMENT}"
                         } else if (planExitCode == 2) {
-                            echo "✅ Changes detected and planned successfully"
+                            echo "✅ Changes detected and planned successfully for ${params.ENVIRONMENT}"
                         } else {
-                            error "❌ Terraform plan failed with exit code: ${planExitCode}"
+                            error "❌ Terraform plan failed for ${params.ENVIRONMENT} with exit code: ${planExitCode}"
                         }
                         
                         // Archive the plan file
-                        archiveArtifacts artifacts: "tfplan-${env.BUILD_TIMESTAMP}", 
+                        archiveArtifacts artifacts: "tfplan-${params.ENVIRONMENT}-${env.BUILD_TIMESTAMP}", 
                                        allowEmptyArchive: false
                     }
                 }
@@ -163,22 +177,22 @@ pipeline {
                 expression { params.ACTION == 'apply' }
             }
             steps {
-                dir('k8s-cluster-terraform/prod') {
+                dir("${env.TF_WORKSPACE_DIR}") {
                     script {
                         if (params.AUTO_APPROVE) {
                             sh '''
-                                echo "Applying Terraform changes with auto-approve..."
-                                terraform apply -auto-approve tfplan-${BUILD_TIMESTAMP}
+                                echo "Applying Terraform changes for ${ENVIRONMENT} with auto-approve..."
+                                terraform apply -auto-approve tfplan-${ENVIRONMENT}-${BUILD_TIMESTAMP}
                             '''
                         } else {
                             timeout(time: 10, unit: 'MINUTES') {
-                                input message: 'Approve Terraform Apply?', 
+                                input message: "Approve Terraform Apply for ${params.ENVIRONMENT}?", 
                                       ok: 'Apply',
                                       submitterParameter: 'APPROVER'
                             }
                             sh '''
-                                echo "Applying Terraform changes..."
-                                terraform apply tfplan-${BUILD_TIMESTAMP}
+                                echo "Applying Terraform changes for ${ENVIRONMENT}..."
+                                terraform apply tfplan-${ENVIRONMENT}-${BUILD_TIMESTAMP}
                             '''
                         }
                     }
@@ -191,14 +205,14 @@ pipeline {
                 expression { params.ACTION == 'destroy' }
             }
             steps {
-                dir('k8s-cluster-terraform/prod') {
+                dir("${env.TF_WORKSPACE_DIR}") {
                     script {
                         def destroyPlanExitCode = sh(
                             script: '''
-                                echo "Creating Terraform destroy plan..."
+                                echo "Creating Terraform destroy plan for ${ENVIRONMENT}..."
                                 terraform plan -destroy \
                                     -var="project_id=$TF_VAR_project_id" \
-                                    -out=destroy-plan-${BUILD_TIMESTAMP} \
+                                    -out=destroy-plan-${ENVIRONMENT}-${BUILD_TIMESTAMP} \
                                     -detailed-exitcode
                             ''',
                             returnStatus: true
@@ -206,15 +220,15 @@ pipeline {
                         
                         // Handle Terraform destroy plan exit codes
                         if (destroyPlanExitCode == 0) {
-                            echo "✅ No resources to destroy"
+                            echo "✅ No resources to destroy in ${params.ENVIRONMENT}"
                         } else if (destroyPlanExitCode == 2) {
-                            echo "✅ Destroy plan created successfully"
+                            echo "✅ Destroy plan created successfully for ${params.ENVIRONMENT}"
                         } else {
-                            error "❌ Terraform destroy plan failed with exit code: ${destroyPlanExitCode}"
+                            error "❌ Terraform destroy plan failed for ${params.ENVIRONMENT} with exit code: ${destroyPlanExitCode}"
                         }
                         
                         // Archive the destroy plan
-                        archiveArtifacts artifacts: "destroy-plan-${env.BUILD_TIMESTAMP}", 
+                        archiveArtifacts artifacts: "destroy-plan-${params.ENVIRONMENT}-${env.BUILD_TIMESTAMP}", 
                                        allowEmptyArchive: false
                     }
                 }
@@ -226,22 +240,22 @@ pipeline {
                 expression { params.ACTION == 'destroy' }
             }
             steps {
-                dir('k8s-cluster-terraform/prod') {
+                dir("${env.TF_WORKSPACE_DIR}") {
                     script {
                         if (params.AUTO_APPROVE) {
                             sh '''
-                                echo "Destroying infrastructure with auto-approve..."
-                                terraform apply -auto-approve destroy-plan-${BUILD_TIMESTAMP}
+                                echo "Destroying infrastructure for ${ENVIRONMENT} with auto-approve..."
+                                terraform apply -auto-approve destroy-plan-${ENVIRONMENT}-${BUILD_TIMESTAMP}
                             '''
                         } else {
                             timeout(time: 10, unit: 'MINUTES') {
-                                input message: 'Approve Terraform Destroy? This will DELETE all infrastructure!', 
+                                input message: "Approve Terraform Destroy for ${params.ENVIRONMENT}? This will DELETE all infrastructure!", 
                                       ok: 'Destroy',
                                       submitterParameter: 'APPROVER'
                             }
                             sh '''
-                                echo "Destroying infrastructure..."
-                                terraform apply destroy-plan-${BUILD_TIMESTAMP}
+                                echo "Destroying infrastructure for ${ENVIRONMENT}..."
+                                terraform apply destroy-plan-${ENVIRONMENT}-${BUILD_TIMESTAMP}
                             '''
                         }
                     }
@@ -254,23 +268,23 @@ pipeline {
                 expression { params.ACTION == 'apply' }
             }
             steps {
-                dir('k8s-cluster-terraform/prod') {
+                dir("${env.TF_WORKSPACE_DIR}") {
                     script {
                         sh '''
-                            echo "Checking for kubeconfig..."
-                            if [ -f kubeconfig-prod ]; then
-                                echo "Kubeconfig generated successfully"
+                            echo "Checking for kubeconfig for ${ENVIRONMENT}..."
+                            if [ -f kubeconfig-${ENVIRONMENT} ]; then
+                                echo "Kubeconfig generated successfully for ${ENVIRONMENT}"
                                 
                                 # Test cluster connectivity (opcional)
-                                export KUBECONFIG=./kubeconfig-prod
+                                export KUBECONFIG=./kubeconfig-${ENVIRONMENT}
                                 kubectl cluster-info --request-timeout=30s || echo "Cluster not ready yet, but kubeconfig exists"
                             else
-                                echo "Warning: kubeconfig-prod not found"
+                                echo "Warning: kubeconfig-${ENVIRONMENT} not found"
                             fi
                         '''
                         
                         // Archive kubeconfig if it exists
-                        archiveArtifacts artifacts: 'kubeconfig-prod', 
+                        archiveArtifacts artifacts: "kubeconfig-${params.ENVIRONMENT}", 
                                        allowEmptyArchive: true
                     }
                 }
@@ -282,10 +296,10 @@ pipeline {
                 expression { params.ACTION == 'apply' }
             }
             steps {
-                dir('k8s-cluster-terraform/prod') {
+                dir("${env.TF_WORKSPACE_DIR}") {
                     script {
                         sh '''
-                            echo "=== Terraform Outputs ==="
+                            echo "=== Terraform Outputs for ${ENVIRONMENT} ==="
                             terraform output || echo "No outputs available"
                         '''
                     }
@@ -295,15 +309,18 @@ pipeline {
         
         stage('Deploy ELK Stack') {
             when {
-                expression { params.ACTION == 'apply' }
+                allOf {
+                    expression { params.ACTION == 'apply' }
+                    expression { params.ENVIRONMENT == 'prod' } // Only deploy ELK in production
+                }
             }
             steps {
                 script {
                     sh '''
-                        echo "🔍 Checking ELK Stack deployment status..."
+                        echo "🔍 Checking ELK Stack deployment status for ${ENVIRONMENT}..."
                         
                         # Set kubeconfig
-                        export KUBECONFIG=k8s-cluster-terraform/prod/kubeconfig-prod
+                        export KUBECONFIG=${TF_WORKSPACE_DIR}/kubeconfig-${ENVIRONMENT}
                         
                         # Verify cluster connectivity
                         kubectl cluster-info --request-timeout=30s
@@ -435,15 +452,18 @@ pipeline {
         
         stage('Deploy Prometheus & Grafana') {
             when {
-                expression { params.ACTION == 'apply' }
+                allOf {
+                    expression { params.ACTION == 'apply' }
+                    expression { params.ENVIRONMENT == 'prod' } // Only deploy Prometheus & Grafana in production
+                }
             }
             steps {
                 script {
                     sh '''
-                        echo "🔍 Checking Prometheus & Grafana deployment status..."
+                        echo "🔍 Checking Prometheus & Grafana deployment status for ${ENVIRONMENT}..."
                         
                         # Set kubeconfig
-                        export KUBECONFIG=k8s-cluster-terraform/prod/kubeconfig-prod
+                        export KUBECONFIG=${TF_WORKSPACE_DIR}/kubeconfig-${ENVIRONMENT}
                         
                         # Verify cluster connectivity
                         kubectl cluster-info --request-timeout=30s
@@ -513,7 +533,7 @@ pipeline {
                         
                         # Step 3: Install Prometheus (following the blog exactly)
                         if [ "$PROMETHEUS_DEPLOYED" = "false" ]; then
-                            echo "📊 Installing Prometheus using Helm..."
+                            echo "📊 Installing Prometheus using Helm for ${ENVIRONMENT}..."
                             /opt/homebrew/bin/helm install prometheus prometheus-community/prometheus \\
                                 --namespace monitoring \\
                                 --wait --timeout=10m
@@ -530,7 +550,7 @@ pipeline {
                         
                         # Step 4: Install Grafana (following the blog exactly)
                         if [ "$GRAFANA_DEPLOYED" = "false" ]; then
-                            echo "📈 Installing Grafana using Helm..."
+                            echo "📈 Installing Grafana using Helm for ${ENVIRONMENT}..."
                             /opt/homebrew/bin/helm install grafana grafana/grafana \\
                                 --namespace monitoring \\
                                 --wait --timeout=10m
@@ -545,14 +565,14 @@ pipeline {
                             echo "⏭️  Grafana already deployed, skipping..."
                         fi
                         
-                        echo "✅ Prometheus & Grafana validation and deployment completed!"
+                        echo "✅ Prometheus & Grafana validation and deployment completed for ${ENVIRONMENT}!"
                         
                         echo "📋 Final Monitoring Stack Status:"
                         kubectl get pods -n monitoring
                         kubectl get services -n monitoring
                         
                         echo ""
-                        echo "🔗 Access Information:"
+                        echo "🔗 Access Information for ${ENVIRONMENT}:"
                         echo "📊 Prometheus: kubectl port-forward -n monitoring service/prometheus-server-ext 9090:9090"
                         echo "   Then open: http://localhost:9090"
                         echo ""
@@ -574,9 +594,9 @@ pipeline {
     post {
         always {
             // Clean up plan files
-            dir('ecommerce-microservice-backend-app/k8s-cluster-terraform/prod') {
+            dir("${env.TF_WORKSPACE_DIR}") {
                 sh '''
-                    echo "Cleaning up temporary files..."
+                    echo "Cleaning up temporary files for ${ENVIRONMENT}..."
                     rm -f tfplan-* destroy-plan-*
                 '''
             }
@@ -589,6 +609,7 @@ pipeline {
                 **Build Details:**
                 - Job: ${env.JOB_NAME}
                 - Build: #${env.BUILD_NUMBER}
+                - Environment: ${params.ENVIRONMENT}
                 - Action: ${params.ACTION}
                 - Project: ${env.TF_VAR_project_id}
                 - Timestamp: ${env.BUILD_TIMESTAMP}
@@ -605,6 +626,7 @@ pipeline {
                 **Build Details:**
                 - Job: ${env.JOB_NAME}
                 - Build: #${env.BUILD_NUMBER}
+                - Environment: ${params.ENVIRONMENT}
                 - Action: ${params.ACTION}
                 - Project: ${env.TF_VAR_project_id}
                 - Console: ${env.BUILD_URL}console

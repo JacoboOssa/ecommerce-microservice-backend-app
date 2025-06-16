@@ -80,6 +80,48 @@ pipeline {
             }
         }
 
+        stage('Upload Artifacts') {
+            when { branch 'master' }
+            steps {
+                script {
+                    def services = [
+                        'api-gateway',
+                        'cloud-config',
+                        'favourite-service',
+                        'order-service',
+                        'payment-service',
+                        'product-service',
+                        'proxy-client',
+                        'service-discovery',
+                        'shipping-service',
+                        'user-service'
+                    ]
+
+                    def version = "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}"
+
+                    def artifacts = services.collect { service ->
+                        [
+                          artifactId: service,
+                          classifier: '',
+                          file: "${service}/target/${service}-v0.1.0.jar",
+                          type: 'jar'
+                        ]
+                    }
+
+                    nexusArtifactUploader(
+                        nexusVersion: 'nexus3',
+                        protocol: 'http',
+                        nexusUrl: '34.63.215.40:8081',
+                        groupId: 'com.ecommerce',
+                        version: version,
+                        repository: 'ecommerce-app',
+                        credentialsId: 'nexusLogin',
+                        artifacts: artifacts
+                    )
+                }
+            }
+        }
+
         //         // run sonarqube test
         //         stage('Run Sonarqube') {
         //             tools {

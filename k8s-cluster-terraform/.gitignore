@@ -34,3 +34,6 @@ terraform.rc
 
 # Ignore kubeconfig files (contain sensitive data)
 kubeconfig-* 
+
+# Ignore terraform state backup file
+terraform-state-backup.json

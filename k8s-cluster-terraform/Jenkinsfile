@@ -504,8 +504,8 @@ pipeline {
                             fi
                         }
                         
-                        # Create namespace for monitoring if it doesn't exist
-                        kubectl create namespace monitoring || echo "Namespace monitoring already exists"
+                        # Using default namespace for monitoring tools
+                        echo "📦 Using default namespace for Prometheus & Grafana deployment"
                         
                         # Step 1: Add Prometheus Helm repository (following the blog)
                         echo "📦 Adding Prometheus community Helm repository..."
@@ -522,12 +522,12 @@ pipeline {
                         GRAFANA_DEPLOYED=false
                         
                         echo "🔍 Checking Prometheus..."
-                        if check_helm_release "prometheus" "monitoring" && check_pods_running "prometheus" "monitoring" 1; then
+                        if check_helm_release "prometheus" "default" && check_pods_running "prometheus" "default" 1; then
                             PROMETHEUS_DEPLOYED=true
                         fi
                         
                         echo "🔍 Checking Grafana..."
-                        if check_helm_release "grafana" "monitoring" && check_pods_running "grafana" "monitoring" 1; then
+                        if check_helm_release "grafana" "default" && check_pods_running "grafana" "default" 1; then
                             GRAFANA_DEPLOYED=true
                         fi
                         
@@ -535,15 +535,15 @@ pipeline {
                         if [ "$PROMETHEUS_DEPLOYED" = "false" ]; then
                             echo "📊 Installing Prometheus using Helm for ${ENVIRONMENT}..."
                             /opt/homebrew/bin/helm install prometheus prometheus-community/prometheus \\
-                                --namespace monitoring \\
+                                --namespace default \\
                                 --wait --timeout=10m
                             
-                            echo "🌐 Exposing Prometheus server service as NodePort..."
+                            echo "🌐 Exposing Prometheus server service as LoadBalancer..."
                             kubectl expose service prometheus-server \\
-                                --type=NodePort \\
+                                --type=LoadBalancer \\
                                 --target-port=9090 \\
                                 --name=prometheus-server-ext \\
-                                --namespace monitoring || echo "Service already exposed"
+                                --namespace default || echo "Service already exposed"
                         else
                             echo "⏭️  Prometheus already deployed, skipping..."
                         fi
@@ -552,15 +552,15 @@ pipeline {
                         if [ "$GRAFANA_DEPLOYED" = "false" ]; then
                             echo "📈 Installing Grafana using Helm for ${ENVIRONMENT}..."
                             /opt/homebrew/bin/helm install grafana grafana/grafana \\
-                                --namespace monitoring \\
+                                --namespace default \\
                                 --wait --timeout=10m
                             
-                            echo "🌐 Exposing Grafana service as NodePort..."
+                            echo "🌐 Exposing Grafana service as LoadBalancer..."
                             kubectl expose service grafana \\
-                                --type=NodePort \\
+                                --type=LoadBalancer \\
                                 --target-port=3000 \\
                                 --name=grafana-ext \\
-                                --namespace monitoring || echo "Service already exposed"
+                                --namespace default || echo "Service already exposed"
                         else
                             echo "⏭️  Grafana already deployed, skipping..."
                         fi
@@ -568,23 +568,25 @@ pipeline {
                         echo "✅ Prometheus & Grafana validation and deployment completed for ${ENVIRONMENT}!"
                         
                         echo "📋 Final Monitoring Stack Status:"
-                        kubectl get pods -n monitoring
-                        kubectl get services -n monitoring
+                        kubectl get pods -n default | grep -E "(prometheus|grafana)" || echo "No monitoring pods found"
+                        kubectl get services -n default | grep -E "(prometheus|grafana)" || echo "No monitoring services found"
                         
                         echo ""
                         echo "🔗 Access Information for ${ENVIRONMENT}:"
-                        echo "📊 Prometheus: kubectl port-forward -n monitoring service/prometheus-server-ext 9090:9090"
+                        echo "📊 Prometheus: kubectl port-forward -n default service/prometheus-server-ext 9090:9090"
                         echo "   Then open: http://localhost:9090"
+                        echo "   Or access via LoadBalancer IP: kubectl get service prometheus-server-ext -n default"
                         echo ""
-                        echo "📈 Grafana: kubectl port-forward -n monitoring service/grafana-ext 3000:3000"
+                        echo "📈 Grafana: kubectl port-forward -n default service/grafana-ext 3000:3000"
                         echo "   Then open: http://localhost:3000"
+                        echo "   Or access via LoadBalancer IP: kubectl get service grafana-ext -n default"
                         echo ""
                         echo "🔑 Get Grafana admin password:"
-                        echo "   kubectl get secret --namespace monitoring grafana -o jsonpath=\"{.data.admin-password}\" | base64 --decode ; echo"
+                        echo "   kubectl get secret --namespace default grafana -o jsonpath=\"{.data.admin-password}\" | base64 --decode ; echo"
                         echo "   Username: admin"
                         echo ""
                         echo "🎯 Prometheus Data Source URL for Grafana:"
-                        echo "   http://prometheus-server.monitoring.svc.cluster.local"
+                        echo "   http://prometheus-server.default.svc.cluster.local"
                     '''
                 }
             }

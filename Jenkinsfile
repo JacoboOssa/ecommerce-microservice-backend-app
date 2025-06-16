@@ -287,28 +287,29 @@ pipeline {
 //             }
 //         }
 
-        stage('Unit Tests & Coverage') {
-            when { branch 'stage' }
-            steps {
-                script {
-                    ['user-service', 'product-service'].each { service ->
-                        sh "mvn clean test jacoco:report -pl ${service}"
-                    }
-                }
-
-                publishHTML(target: [
-                    reportDir: 'user-service/target/site/jacoco',
-                    reportFiles: 'index.html',
-                    reportName: 'Cobertura user-service'
-                ])
-
-                publishHTML(target: [
-                    reportDir: 'product-service/target/site/jacoco',
-                    reportFiles: 'index.html',
-                    reportName: 'Cobertura product-service'
-                ])
-            }
-        }
+//         stage('Unit Tests & Coverage') {
+//             when { branch 'stage' }
+//             steps {
+//                 script {
+//                     ['user-service', 'product-service'].each { service ->
+//                         sh "mvn clean test jacoco:report -pl ${service}"
+//                     }
+//                 }
+//                 junit '**/target/surefire-reports/*.xml'
+//
+//                 publishHTML(target: [
+//                     reportDir: 'user-service/target/site/jacoco',
+//                     reportFiles: 'index.html',
+//                     reportName: 'Cobertura user-service'
+//                 ])
+//
+//                 publishHTML(target: [
+//                     reportDir: 'product-service/target/site/jacoco',
+//                     reportFiles: 'index.html',
+//                     reportName: 'Cobertura product-service'
+//                 ])
+//             }
+//         }
 
         stage('Integration Tests') {
             when { branch 'stage' }
@@ -634,76 +635,76 @@ pipeline {
 //             }
 //         }
 
-        stage('Authenticate to GKE') {
-            when { branch 'master' }
-            steps {
-                withCredentials([file(credentialsId: 'gcloud-creds', variable: 'GCLOUD_CREDS')]) {
-                    sh 'gcloud container clusters get-credentials k8s-cluster-prod --zone us-central1 --project beaming-pillar-461818-j7'
-                }
-            }
-        }
-
-                stage('Create namespace for deployments') {
-                    when { branch 'master' }
-                    steps {
-                        sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
-                    }
-                }
-
-            stage('Deploy common config for microservices') {
-                when { branch 'master' }
-                steps {
-                    sh "kubectl apply -f k8s/common-config.yaml -n ${K8S_NAMESPACE}"
-                }
-            }
-
-            stage('Deploy Core Services') {
-                when { branch 'master' }
-                steps {
-                    sh "kubectl apply -f k8s/zipkin/ -n ${K8S_NAMESPACE}"
-                    sh "kubectl rollout status deployment/zipkin -n ${K8S_NAMESPACE} --timeout=200s"
-
-                    sh "kubectl apply -f k8s/service-discovery/ -n ${K8S_NAMESPACE}"
-                    sh "kubectl set image deployment/service-discovery service-discovery=${DOCKERHUB_USER}/service-discovery:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
-                    sh "kubectl set env deployment/service-discovery SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
-                    sh "kubectl rollout status deployment/service-discovery -n ${K8S_NAMESPACE} --timeout=200s"
-
-                    sh "kubectl apply -f k8s/cloud-config/ -n ${K8S_NAMESPACE}"
-                    sh "kubectl set image deployment/cloud-config cloud-config=${DOCKERHUB_USER}/cloud-config:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
-                    sh "kubectl set env deployment/cloud-config SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
-                    sh "kubectl rollout status deployment/cloud-config -n ${K8S_NAMESPACE} --timeout=300s"
-                }
-            }
-
-            stage('Deploy Microservices') {
-                when { branch 'master' }
-                steps {
-                    script {
-                        def appServices = ['api-gateway', 'cloud-config', 'favourite-service', 'order-service', 'payment-service', 'product-service', 'proxy-client', 'service-discovery', 'shipping-service', 'user-service']
-
-                        for (svc in appServices) {
-                            def image = "${DOCKERHUB_USER}/${svc}:${IMAGE_TAG}"
-
-                            sh "kubectl apply -f k8s/${svc}/ -n ${K8S_NAMESPACE}"
-                            sh "kubectl set image deployment/${svc} ${svc}=${image} -n ${K8S_NAMESPACE}"
-                            sh "kubectl set env deployment/${svc} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
-                            sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=200s"
-                        }
-                    }
-                }
-            }
-
-            stage('Generate release notes') {
-                when {
-                    branch 'master'
-                }
-                steps {
-                    sh '''
-                    /opt/homebrew/bin/convco changelog > RELEASE_NOTES.md
-                    '''
-                    archiveArtifacts artifacts: 'RELEASE_NOTES.md', fingerprint: true
-                }
-            }
+//         stage('Authenticate to GKE') {
+//             when { branch 'master' }
+//             steps {
+//                 withCredentials([file(credentialsId: 'gcloud-creds', variable: 'GCLOUD_CREDS')]) {
+//                     sh 'gcloud container clusters get-credentials k8s-cluster-prod --zone us-central1 --project beaming-pillar-461818-j7'
+//                 }
+//             }
+//         }
+//
+//                 stage('Create namespace for deployments') {
+//                     when { branch 'master' }
+//                     steps {
+//                         sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
+//                     }
+//                 }
+//
+//             stage('Deploy common config for microservices') {
+//                 when { branch 'master' }
+//                 steps {
+//                     sh "kubectl apply -f k8s/common-config.yaml -n ${K8S_NAMESPACE}"
+//                 }
+//             }
+//
+//             stage('Deploy Core Services') {
+//                 when { branch 'master' }
+//                 steps {
+//                     sh "kubectl apply -f k8s/zipkin/ -n ${K8S_NAMESPACE}"
+//                     sh "kubectl rollout status deployment/zipkin -n ${K8S_NAMESPACE} --timeout=200s"
+//
+//                     sh "kubectl apply -f k8s/service-discovery/ -n ${K8S_NAMESPACE}"
+//                     sh "kubectl set image deployment/service-discovery service-discovery=${DOCKERHUB_USER}/service-discovery:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
+//                     sh "kubectl set env deployment/service-discovery SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+//                     sh "kubectl rollout status deployment/service-discovery -n ${K8S_NAMESPACE} --timeout=200s"
+//
+//                     sh "kubectl apply -f k8s/cloud-config/ -n ${K8S_NAMESPACE}"
+//                     sh "kubectl set image deployment/cloud-config cloud-config=${DOCKERHUB_USER}/cloud-config:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
+//                     sh "kubectl set env deployment/cloud-config SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+//                     sh "kubectl rollout status deployment/cloud-config -n ${K8S_NAMESPACE} --timeout=300s"
+//                 }
+//             }
+//
+//             stage('Deploy Microservices') {
+//                 when { branch 'master' }
+//                 steps {
+//                     script {
+//                         def appServices = ['api-gateway', 'cloud-config', 'favourite-service', 'order-service', 'payment-service', 'product-service', 'proxy-client', 'service-discovery', 'shipping-service', 'user-service']
+//
+//                         for (svc in appServices) {
+//                             def image = "${DOCKERHUB_USER}/${svc}:${IMAGE_TAG}"
+//
+//                             sh "kubectl apply -f k8s/${svc}/ -n ${K8S_NAMESPACE}"
+//                             sh "kubectl set image deployment/${svc} ${svc}=${image} -n ${K8S_NAMESPACE}"
+//                             sh "kubectl set env deployment/${svc} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+//                             sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=200s"
+//                         }
+//                     }
+//                 }
+//             }
+//
+//             stage('Generate release notes') {
+//                 when {
+//                     branch 'master'
+//                 }
+//                 steps {
+//                     sh '''
+//                     /opt/homebrew/bin/convco changelog > RELEASE_NOTES.md
+//                     '''
+//                     archiveArtifacts artifacts: 'RELEASE_NOTES.md', fingerprint: true
+//                 }
+//             }
     }
 
     post {

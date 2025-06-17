@@ -54,14 +54,14 @@ spec:
           #     mountPath: /etc/config
           livenessProbe:
             httpGet:
-              path: /shipping-service/actuator/health 
+              path: /actuator/health
               port: 8600
             initialDelaySeconds: 60 
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /shipping-service/actuator/health 
+              path: /actuator/health
               port: 8600
             initialDelaySeconds: 30
             periodSeconds: 10

@@ -1,4 +1,3 @@
-
 # Estrategia de Branching para CI/CD
 
 **Fecha:** 2025-06-12  
@@ -43,16 +42,23 @@ Se utilizará el modelo **GitFlow simplificado**, adaptado a las característica
 - Utilizada para validar integraciones y pruebas antes de subir a Producción.
 - Jenkins despliega automáticamente al entorno Stage.
 
+### 3.3. dev
+
+- Rama de desarrollo activo donde se integran las features completadas.
+- Utilizada como rama base para la integración continua de nuevas funcionalidades.
+- Permite validar la integración de múltiples features antes de pasar a stage.
+- Facilita la colaboración entre desarrolladores al tener un punto común de integración.
+
 ---
 
 ## 4. Ramas de desarrollo
 
 ### 4.1. feature/{nombre-de-la-feature}
 
-- Se crean a partir de stage.
+- Se crean a partir de dev.
 - Utilizadas para desarrollar nuevas funcionalidades, mejoras o refactorizaciones.
 - Al finalizar el desarrollo:
-  - Se realiza un PR hacia stage.
+  - Se realiza un PR hacia dev.
   - El código pasa por validaciones de CI (tests, lint, coverage, build).
 - Ejemplo de nombres:
   - feature/agregar-login
@@ -68,7 +74,7 @@ Se utilizará el modelo **GitFlow simplificado**, adaptado a las característica
 - Permiten corregir errores críticos sin interferir con el flujo de desarrollo.
 - Al finalizar:
   - Se realiza PR hacia main.
-  - Una vez mergeado, se integra el mismo cambio manualmente a stage (para mantener coherencia).
+  - Una vez mergeado, se integra el mismo cambio manualmente a dev y stage (para mantener coherencia).
 - Ejemplos:
   - hotfix/corregir-token-expirado
   - hotfix/error-500-pagos
@@ -77,9 +83,9 @@ Se utilizará el modelo **GitFlow simplificado**, adaptado a las característica
 
 ## 6. Flujo de Trabajo Resumido
 
-feature/* --> stage --> main  
-                ↘  
-            hotfix/* --> main
+feature/* --> dev --> stage --> main  
+                        ↘  
+                    hotfix/* --> main
 
 ---
 
@@ -98,6 +104,7 @@ feature/* --> stage --> main
 |-------|------------------------|-----------------|
 | main  | Producción             | Jenkins         |
 | stage | Stage                  | Jenkins         |
+| dev   | Desarrollo/Testing     | Jenkins ejecuta CI |
 | feature/* | No despliega automáticamente | Jenkins ejecuta CI |
 
 ### Validaciones de PR:
@@ -111,6 +118,7 @@ feature/* --> stage --> main
 
 - main: protegida — solo admite PR.
 - stage: sin protección de PR obligatoria, pero se recomienda revisión voluntaria.
+- dev: sin protección de PR obligatoria, pero se recomienda revisión voluntaria.
 - feature/* y hotfix/*: sin restricciones.
 
 ### Versionado de microservicios:
@@ -125,15 +133,15 @@ feature/* --> stage --> main
 
 - Se requiere aprobación de revisores obligatoria en los PR.
 - Los pipelines de Jenkins ya cuentan con políticas de bloqueo en caso de fallos en los tests o el build.
-- Los cambios de hotfix deben integrarse manualmente a stage después de ser aplicados en main.
+- Los cambios de hotfix deben integrarse manualmente a dev y stage después de ser aplicados en main.
 
 ---
 
 ## 9. Diagrama General
 
-feature/* --> stage --> main  
-                ↘  
-            hotfix/* --> main
+feature/* --> dev --> stage --> main  
+                        ↘  
+                    hotfix/* --> main
 
 ---
 
@@ -145,3 +153,7 @@ Este flujo está diseñado para:
 - Evitar bloqueos administrativos innecesarios en un equipo pequeño.
 - Mantener entornos sincronizados y estables.
 - Responder rápidamente ante incidentes críticos.
+- Facilitar la integración continua mediante la rama dev como punto de convergencia.
+
+## 11. Repo de git 
+![GitHub  - Ramas](/ecommerce-microservice-backend-app/docs/images/image-3.png)

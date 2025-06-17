@@ -5,7 +5,7 @@ metadata:
   labels:
     app: zipkin
 spec:
-  type: ClusterIP # Exposes the service on a cluster-internal IP
+  type: LoadBalancer # Exposes the service on a cluster-internal IP
   ports:
   - port: 9411      # Port the service will be available on
     targetPort: 9411 # Port on the Zipkin pod

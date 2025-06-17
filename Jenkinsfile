@@ -10,7 +10,7 @@ pipeline {
         DOCKERHUB_USER = 'jacoboossag'
         DOCKER_CREDENTIALS_ID = 'docker_hub_pwd'
         SERVICES = 'api-gateway cloud-config favourite-service order-service payment-service product-service proxy-client service-discovery shipping-service user-service locust'
-        K8S_NAMESPACE = 'ecommerce'
+        K8S_NAMESPACE = 'default'
         CLOUD_CORE_PROJECT = 'beaming-pillar-461818-j7'
         GCLOUD_PATH = '/Users/jacoboossag/Downloads/google-cloud-sdk/bin'
     }
@@ -122,194 +122,167 @@ pipeline {
             }
         }
 
-        //         // run sonarqube test
-        //         stage('Run Sonarqube') {
-        //             tools {
-        //                 jdk 'JDK_17'
-        //             }
-        // //          environment {
-        // //              JAVA_HOME = tool 'JDK_17'
-        // //              PATH = "${JAVA_HOME}/bin:${env.PATH}"
-        // //              scannerHome = tool 'lil-sonar-tool'
-        // //          }
-        //             steps {
-        //                 withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
-        //                 sh 'java -version'
-        //                 sh "${scannerHome}/bin/sonar-scanner -Dsonar.java.binaries=target"
-        //                 }
-        //             }
-        //         }
-//         stage('Run SonarQube Analysis') {
-//             tools {
-//                 jdk 'JDK_17'
-//             }
-//             environment {
-//                 JAVA_HOME = tool 'JDK_17'
-//                 PATH = "${JAVA_HOME}/bin:${env.PATH}"
-//                 scannerHome = tool 'lil-sonar-tool'
-//             }
-//             steps {
-//                 script {
-//                     def javaServices = [
-//                         'api-gateway',
-//                         'cloud-config',
-//                         'favourite-service',
-//                         'order-service',
-//                         'payment-service',
-//                         'product-service',
-//                         'proxy-client',
-//                         'service-discovery',
-//                         'shipping-service',
-//                         'user-service',
-//                         'e2e-tests'
-//                     ]
-//
-//                     withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
-//                         javaServices.each { service ->
-//                             dir(service) {
-//                                 sh "${scannerHome}/bin/sonar-scanner " +
-//                                 "-Dsonar.projectKey=${service} " +
-//                                 "-Dsonar.projectName=${service} " +
-//                                 '-Dsonar.sources=src ' +
-//                                 '-Dsonar.java.binaries=target/classes'
-//                             }
-//                         }
-//
-//                         dir('locust') {
-//                             sh "${scannerHome}/bin/sonar-scanner " +
-//                             '-Dsonar.projectKey=locust ' +
-//                             '-Dsonar.projectName=locust ' +
-//                             '-Dsonar.sources=test'
-//                         }
-//                     }
-//                 }
-//             }
-//         }
+        stage('Run SonarQube Analysis') {
+            when { branch 'stage' }
 
-//         stage('Trivy Vulnerability Scan & Report') {
-//             environment{
-//                 TRIVY_PATH = '/opt/homebrew/bin'
-//             }
-//             steps {
-//                 script {
-// //                     def trivyPathBin = "/opt/homebrew/bin/trivy"
-//                     env.PATH = "${TRIVY_PATH}:${env.PATH}"
-//
-//
-//                     def services = [
-//                         'api-gateway',
-//                         'cloud-config',
-//                         'favourite-service',
-//                         'order-service',
-//                         'payment-service',
-//                         'product-service',
-//                         'proxy-client',
-//                         'service-discovery',
-//                         'shipping-service',
-//                         'user-service'
-//                     ]
-//
-// //                     def outputDir = 'trivy-reports'
-//                     sh "mkdir -p trivy-reports"
-//
-//                     services.each { service ->
-// //                         def imageTag = "jacoboossag/${service}:prod"
-//                         def reportPath = "trivy-reports/${service}.html"
-//
-// //                         echo "🔍 Escaneando imagen ${imageTag} con Trivy..."
-//                         sh"""
-//                             trivy image --format template \\
-//                             --template "@/opt/homebrew/Cellar/trivy/0.63.0/share/trivy/templates/html.tpl" \\
-//                             --severity HIGH,CRITICAL \\
-//                             -o ${reportPath} \\
-//                             ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}
-//                         """
-//                     }
-//
-//                     publishHTML(target: [
-//                     allowMissing: true,
-//                     alwaysLinkToLastBuild: true,
-//                     keepAll: true,
-//                     reportDir: 'trivy-reports',
-//                     reportFiles: '*.html',
-//                     reportName: 'Trivy Scan Report'
-//                     ])
-//                 }
-//             }
-//         }
 
-//         stage('Build Docker Images of each service') {
-//             when {
-//                 anyOf {
-//                     branch 'dev'
-//                     branch 'stage'
-//                     branch 'master'
-//                 }
-//             }
-//             steps {
-//                 script {
-//                     SERVICES.split().each { service ->
-//                         sh "docker buildx build --platform linux/amd64,linux/arm64 -t ${DOCKERHUB_USER}/${service}:${IMAGE_TAG} --build-arg SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} --push ./${service}"
-//                     }
-//                 }
-//             }
-//         }
-//
-//         stage('Push Docker Images to Docker Hub') {
-//             when {
-//                 anyOf {
-//                     branch 'dev'
-//                     branch 'stage'
-//                     branch 'master'
-//                 }
-//             }
-//             steps {
-//                 withCredentials([string(credentialsId: "${DOCKER_CREDENTIALS_ID}", variable: 'docker_hub_pwd')]) {
-//                     sh "docker login -u ${DOCKERHUB_USER} -p ${docker_hub_pwd}"
-//                     script {
-//                         SERVICES.split().each { service ->
-//                             sh "docker push ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}"
-//                         }
-//                     }
-//                 }
-//             }
-//         }
+            tools {
+                jdk 'JDK_17'
+            }
+            environment {
+                JAVA_HOME = tool 'JDK_17'
+                PATH = "${JAVA_HOME}/bin:${env.PATH}"
+                scannerHome = tool 'lil-sonar-tool'
+            }
+            steps {
+                script {
+                    def javaServices = [
+                        'api-gateway',
+                        'cloud-config',
+                        'favourite-service',
+                        'order-service',
+                        'payment-service',
+                        'product-service',
+                        'proxy-client',
+                        'service-discovery',
+                        'shipping-service',
+                        'user-service',
+                        'e2e-tests'
+                    ]
 
-//         stage('Unit Tests') {
-//             when { branch 'dev' }
-//             steps {
-//                 script {
-//                     ['user-service', 'product-service'].each {
-//                         sh "mvn test -pl ${it}"
-//                     }
-//                 }
-//                 junit '**/target/surefire-reports/*.xml'
-//             }
-//         }
+                    withSonarQubeEnv(credentialsId: 'useSonarQube', installationName: 'lil sonar installation') {
+                        javaServices.each { service ->
+                            dir(service) {
+                                sh "${scannerHome}/bin/sonar-scanner " +
+                                "-Dsonar.projectKey=${service} " +
+                                "-Dsonar.projectName=${service} " +
+                                '-Dsonar.sources=src ' +
+                                '-Dsonar.java.binaries=target/classes'
+                            }
+                        }
 
-//         stage('Unit Tests & Coverage') {
-//             when { branch 'stage' }
-//             steps {
-//                 script {
-//                     ['user-service', 'product-service'].each { service ->
-//                         sh "mvn clean test jacoco:report -pl ${service}"
-//                     }
-//                 }
-//                 junit '**/target/surefire-reports/*.xml'
-//
-//                 publishHTML(target: [
-//                     reportDir: 'user-service/target/site/jacoco',
-//                     reportFiles: 'index.html',
-//                     reportName: 'Cobertura user-service'
-//                 ])
-//
-//                 publishHTML(target: [
-//                     reportDir: 'product-service/target/site/jacoco',
-//                     reportFiles: 'index.html',
-//                     reportName: 'Cobertura product-service'
-//                 ])
-//             }
-//         }
+                        dir('locust') {
+                            sh "${scannerHome}/bin/sonar-scanner " +
+                            '-Dsonar.projectKey=locust ' +
+                            '-Dsonar.projectName=locust ' +
+                            '-Dsonar.sources=test'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Trivy Vulnerability Scan & Report') {
+            when { branch 'stage' }
+
+            environment{
+                TRIVY_PATH = '/opt/homebrew/bin'
+            }
+            steps {
+                script {
+                    env.PATH = "${TRIVY_PATH}:${env.PATH}"
+
+
+                    def services = [
+                        'api-gateway',
+                        'cloud-config',
+                        'favourite-service',
+                        'order-service',
+                        'payment-service',
+                        'product-service',
+                        'proxy-client',
+                        'service-discovery',
+                        'shipping-service',
+                        'user-service'
+                    ]
+
+                    sh "mkdir -p trivy-reports"
+
+                    services.each { service ->
+                        def reportPath = "trivy-reports/${service}.html"
+
+                        sh"""
+                            trivy image --format template \\
+                            --template "@/opt/homebrew/Cellar/trivy/0.63.0/share/trivy/templates/html.tpl" \\
+                            --severity HIGH,CRITICAL \\
+                            -o ${reportPath} \\
+                            ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}
+                        """
+                    }
+
+                    publishHTML(target: [
+                    allowMissing: true,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'trivy-reports',
+                    reportFiles: '*.html',
+                    reportName: 'Trivy Scan Report'
+                    ])
+                }
+            }
+        }
+
+        stage('Build Docker Images of each service') {
+            when {
+                anyOf {
+                    branch 'dev'
+                    branch 'stage'
+                    branch 'master'
+                }
+            }
+            steps {
+                script {
+                    SERVICES.split().each { service ->
+                        sh "docker buildx build --platform linux/amd64,linux/arm64 -t ${DOCKERHUB_USER}/${service}:${IMAGE_TAG} --build-arg SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} --push ./${service}"
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Images to Docker Hub') {
+            when {
+                anyOf {
+                    branch 'dev'
+                    branch 'stage'
+                    branch 'master'
+                }
+            }
+            steps {
+                withCredentials([string(credentialsId: "${DOCKER_CREDENTIALS_ID}", variable: 'docker_hub_pwd')]) {
+                    sh "docker login -u ${DOCKERHUB_USER} -p ${docker_hub_pwd}"
+                    script {
+                        SERVICES.split().each { service ->
+                            sh "docker push ${DOCKERHUB_USER}/${service}:${IMAGE_TAG}"
+                        }
+                    }
+                }
+            }
+        }
+
+
+        stage('Unit Tests & Coverage') {
+            when { branch 'dev' }
+            steps {
+                script {
+                    ['user-service', 'product-service'].each { service ->
+                        sh "mvn clean test jacoco:report -pl ${service}"
+                    }
+                }
+                junit '**/target/surefire-reports/*.xml'
+
+                publishHTML(target: [
+                    reportDir: 'user-service/target/site/jacoco',
+                    reportFiles: 'index.html',
+                    reportName: 'Cobertura user-service'
+                ])
+
+                publishHTML(target: [
+                    reportDir: 'product-service/target/site/jacoco',
+                    reportFiles: 'index.html',
+                    reportName: 'Cobertura product-service'
+                ])
+            }
+        }
 
         stage('Integration Tests') {
             when { branch 'stage' }
@@ -332,9 +305,9 @@ pipeline {
                 junit 'e2e-tests/target/failsafe-reports/*.xml'
             }
         }
-        /*
+
         stage('Start containers for load and stress testing') {
-            when { branch 'master' }
+            when { branch 'stage' }
             steps {
                 script {
                     sh '''
@@ -527,7 +500,7 @@ pipeline {
         }
 
         stage('OWASP ZAP Scan') {
-            when { branch 'master' }
+            when { branch 'stage' }
             steps {
                 script {
                     echo '==> Iniciando escaneos con OWASP ZAP'
@@ -541,7 +514,7 @@ pipeline {
                         [name: 'favourite-service', url: 'http://favourite-service-container:8800/favourite-service']
                     ]
 
-//                     sh 'mkdir -p zap-reports'
+                    sh 'mkdir -p zap-reports'
 
                     targets.each { service ->
                         def reportFile = "zap-reports/report-${service.name}.html"
@@ -553,158 +526,148 @@ pipeline {
                             zaproxy/zap-stable \
                             zap-full-scan.py \
                             -t ${service.url} \
-                            //                             -r ${reportFile} \
+                            -r ${reportFile} \
                             -I
                         """
                     }
                 }
             }
         }
-        */
 
-//         stage('Publicar Reportes de Seguridad') {
-//             when { branch 'master' }
-//             steps {
-//                 //                 echo '==> Archivando reportes HTML de ZAP'
-//                 //                 archiveArtifacts artifacts: 'report-*.html', fingerprint: true
-//                 echo '==> Publicando reportes HTML en interfaz Jenkins'
-//                 publishHTML([
-//                     allowMissing: false,
-//                     alwaysLinkToLastBuild: true,
-//                     keepAll: true,
-//                     reportDir: 'zap-reports',
-//                     reportFiles: 'report-*.html',
-//                     reportName: 'ZAP Security Reports',
-//                     reportTitles: 'OWASP ZAP Full Scan Results'
-//                 ])
-//             }
-//         }
 
-//         stage('Stop and Remove Containers') {
-//             when { branch 'master' }
-//             steps {
-//                 script {
-//                     sh '''
-//                     docker rm -f locust || true
-//                     docker rm -f favourite-service-container || true
-//                     docker rm -f user-service-container || true
-//                     docker rm -f shipping-service-container || true
-//                     docker rm -f product-service-container || true
-//                     docker rm -f payment-service-container || true
-//                     docker rm -f order-service-container || true
-//                     docker rm -f cloud-config-container || true
-//                     docker rm -f service-discovery-container || true
-//                     docker rm -f zipkin-container || true
-//
-//                     docker rm -f zap-container || true
-//
-//                     docker network rm ecommerce-test || true
-//
-//                     '''
-//                 }
-//             }
-//         }
+        stage('Publicar Reportes de Seguridad') {
+            when { branch 'stage' }
+            steps {
+                echo '==> Publicando reportes HTML en interfaz Jenkins'
+                publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'zap-reports',
+                    reportFiles: 'report-*.html',
+                    reportName: 'ZAP Security Reports',
+                    reportTitles: 'OWASP ZAP Full Scan Results'
+                ])
+            }
+        }
 
-//         stage('Waiting approval for deployment') {
-//             when { branch 'master' }
-//             steps {
-//                 script {
-//                     emailext(
-//                         to: '$DEFAULT_RECIPIENTS',
-//                         subject: "Action Required: Approval Needed for Deploy of Build #${env.BUILD_NUMBER}",
-//                         body: """\
-//                         Hello dead man (daniel) and Goat Ossa,
-//                         The build #${env.BUILD_NUMBER} for branch *${env.BRANCH_NAME}* has completed and is pending approval for deployment.
-//                         Please review the changes and approve or abort
-//                         You can access the build details here:
-//                         ${env.BUILD_URL}
-//                         """
-//                     )
-//
-//                     input message: 'Approve deployment to production (kubernetes) ?', ok: 'Deploy'
-//                 }
-//             }
-//         }
-//
-//         stage('Simulate deployment to production') {
-//             when { branch 'master' }
-//             steps {
-//                 script {
-//                     echo "Simulating deployment to production with tag ${IMAGE_TAG} and profile ${SPRING_PROFILES_ACTIVE}"
-//                 }
-//             }
-//         }
+        stage('Stop and Remove Containers') {
+            when { branch 'stage' }
+            steps {
+                script {
+                    sh '''
+                    docker rm -f locust || true
+                    docker rm -f favourite-service-container || true
+                    docker rm -f user-service-container || true
+                    docker rm -f shipping-service-container || true
+                    docker rm -f product-service-container || true
+                    docker rm -f payment-service-container || true
+                    docker rm -f order-service-container || true
+                    docker rm -f cloud-config-container || true
+                    docker rm -f service-discovery-container || true
+                    docker rm -f zipkin-container || true
 
-//         stage('Authenticate to GKE') {
-//             when { branch 'master' }
-//             steps {
-//                 withCredentials([file(credentialsId: 'gcloud-creds', variable: 'GCLOUD_CREDS')]) {
-//                     sh 'gcloud container clusters get-credentials k8s-cluster-prod --zone us-central1 --project beaming-pillar-461818-j7'
-//                 }
-//             }
-//         }
-//
-//                 stage('Create namespace for deployments') {
-//                     when { branch 'master' }
-//                     steps {
-//                         sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
-//                     }
-//                 }
-//
-//             stage('Deploy common config for microservices') {
-//                 when { branch 'master' }
-//                 steps {
-//                     sh "kubectl apply -f k8s/common-config.yaml -n ${K8S_NAMESPACE}"
-//                 }
-//             }
-//
-//             stage('Deploy Core Services') {
-//                 when { branch 'master' }
-//                 steps {
-//                     sh "kubectl apply -f k8s/zipkin/ -n ${K8S_NAMESPACE}"
-//                     sh "kubectl rollout status deployment/zipkin -n ${K8S_NAMESPACE} --timeout=200s"
-//
-//                     sh "kubectl apply -f k8s/service-discovery/ -n ${K8S_NAMESPACE}"
-//                     sh "kubectl set image deployment/service-discovery service-discovery=${DOCKERHUB_USER}/service-discovery:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
-//                     sh "kubectl set env deployment/service-discovery SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
-//                     sh "kubectl rollout status deployment/service-discovery -n ${K8S_NAMESPACE} --timeout=200s"
-//
-//                     sh "kubectl apply -f k8s/cloud-config/ -n ${K8S_NAMESPACE}"
-//                     sh "kubectl set image deployment/cloud-config cloud-config=${DOCKERHUB_USER}/cloud-config:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
-//                     sh "kubectl set env deployment/cloud-config SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
-//                     sh "kubectl rollout status deployment/cloud-config -n ${K8S_NAMESPACE} --timeout=300s"
-//                 }
-//             }
-//
-//             stage('Deploy Microservices') {
-//                 when { branch 'master' }
-//                 steps {
-//                     script {
-//                         def appServices = ['api-gateway', 'cloud-config', 'favourite-service', 'order-service', 'payment-service', 'product-service', 'proxy-client', 'service-discovery', 'shipping-service', 'user-service']
-//
-//                         for (svc in appServices) {
-//                             def image = "${DOCKERHUB_USER}/${svc}:${IMAGE_TAG}"
-//
-//                             sh "kubectl apply -f k8s/${svc}/ -n ${K8S_NAMESPACE}"
-//                             sh "kubectl set image deployment/${svc} ${svc}=${image} -n ${K8S_NAMESPACE}"
-//                             sh "kubectl set env deployment/${svc} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
-//                             sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=200s"
-//                         }
-//                     }
-//                 }
-//             }
-//
-//             stage('Generate release notes') {
-//                 when {
-//                     branch 'master'
-//                 }
-//                 steps {
-//                     sh '''
-//                     /opt/homebrew/bin/convco changelog > RELEASE_NOTES.md
-//                     '''
-//                     archiveArtifacts artifacts: 'RELEASE_NOTES.md', fingerprint: true
-//                 }
-//             }
+                    docker rm -f zap-container || true
+
+                    docker network rm ecommerce-test || true
+
+                    '''
+                }
+            }
+        }
+
+        stage('Waiting approval for deployment') {
+            when { branch 'master' }
+            steps {
+                script {
+                    emailext(
+                        to: '$DEFAULT_RECIPIENTS',
+                        subject: "Action Required: Approval Needed for Deploy of Build #${env.BUILD_NUMBER}",
+                        body: """\
+                        Hello dead man (daniel) and Goat Ossa,
+                        The build #${env.BUILD_NUMBER} for branch *${env.BRANCH_NAME}* has completed and is pending approval for deployment.
+                        Please review the changes and approve or abort
+                        You can access the build details here:
+                        ${env.BUILD_URL}
+                        """
+                    )
+
+                    input message: 'Approve deployment to production (kubernetes) ?', ok: 'Deploy'
+                }
+            }
+        }
+
+
+        stage('Authenticate to GKE') {
+            when { branch 'master' }
+            steps {
+                withCredentials([file(credentialsId: 'gcloud-creds', variable: 'GCLOUD_CREDS')]) {
+                    sh 'gcloud container clusters get-credentials k8s-cluster-prod --zone us-central1 --project beaming-pillar-461818-j7'
+                }
+            }
+        }
+
+        stage('Create namespace for deployments') {
+            when { branch 'master' }
+            steps {
+                sh "kubectl get namespace ${K8S_NAMESPACE} || kubectl create namespace ${K8S_NAMESPACE}"
+            }
+        }
+
+        stage('Deploy common config for microservices') {
+            when { branch 'master' }
+            steps {
+                sh "kubectl apply -f k8s/common-config.yaml -n ${K8S_NAMESPACE}"
+            }
+        }
+
+        stage('Deploy Core Services') {
+            when { branch 'master' }
+            steps {
+                sh "kubectl apply -f k8s/zipkin/ -n ${K8S_NAMESPACE}"
+                sh "kubectl rollout status deployment/zipkin -n ${K8S_NAMESPACE} --timeout=200s"
+
+                sh "kubectl apply -f k8s/service-discovery/ -n ${K8S_NAMESPACE}"
+                sh "kubectl set image deployment/service-discovery service-discovery=${DOCKERHUB_USER}/service-discovery:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
+                sh "kubectl set env deployment/service-discovery SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+                sh "kubectl rollout status deployment/service-discovery -n ${K8S_NAMESPACE} --timeout=200s"
+
+                sh "kubectl apply -f k8s/cloud-config/ -n ${K8S_NAMESPACE}"
+                sh "kubectl set image deployment/cloud-config cloud-config=${DOCKERHUB_USER}/cloud-config:${IMAGE_TAG} -n ${K8S_NAMESPACE}"
+                sh "kubectl set env deployment/cloud-config SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+                sh "kubectl rollout status deployment/cloud-config -n ${K8S_NAMESPACE} --timeout=300s"
+            }
+        }
+
+        stage('Deploy Microservices') {
+            when { branch 'master' }
+            steps {
+                script {
+                    def appServices = ['api-gateway', 'cloud-config', 'favourite-service', 'order-service', 'payment-service', 'product-service', 'proxy-client', 'service-discovery', 'shipping-service', 'user-service']
+
+                    for (svc in appServices) {
+                        def image = "${DOCKERHUB_USER}/${svc}:${IMAGE_TAG}"
+
+                        sh "kubectl apply -f k8s/${svc}/ -n ${K8S_NAMESPACE}"
+                        sh "kubectl set image deployment/${svc} ${svc}=${image} -n ${K8S_NAMESPACE}"
+                        sh "kubectl set env deployment/${svc} SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE} -n ${K8S_NAMESPACE}"
+                        sh "kubectl rollout status deployment/${svc} -n ${K8S_NAMESPACE} --timeout=200s"
+                    }
+                }
+            }
+        }
+
+        stage('Generate release notes') {
+            when {
+                branch 'master'
+            }
+            steps {
+                sh '''
+                    /opt/homebrew/bin/convco changelog > RELEASE_NOTES.md
+                '''
+                archiveArtifacts artifacts: 'RELEASE_NOTES.md', fingerprint: true
+            }
+        }
     }
 
     post {

@@ -28,6 +28,15 @@ resilience4j:
         wait-duration-in-open-state: 5s
         sliding-window-type: COUNT_BASED
 
+  bulkhead:
+    instances:
+      productServiceBulkhead:
+        maxConcurrentCalls: 10
+        maxWaitDuration: 0ms
+      orderServiceBulkhead:
+        maxConcurrentCalls: 5
+        maxWaitDuration: 0ms
+
 management:
   endpoints:
     web:

@@ -38,32 +38,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		http.cors().disable()
 				.csrf().disable()
 				.authorizeRequests()
-				.antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-				.antMatchers("/", "index", "**/css/**", "**/js/**").permitAll()
-				.antMatchers("/api/authenticate/**").permitAll()
-				.antMatchers("/api/categories/**").permitAll()
-				.antMatchers("/api/products/**").permitAll()
-				.antMatchers(HttpMethod.POST, "/api/users").permitAll()
-				.antMatchers("/swagger-ui.html","/swagger-ui/**","/v3/api-docs/**",
-						"/v3/api-docs.yaml", "/api-docs/**","/swagger-resources/**",
-						"/webjars/**").permitAll()
-				.antMatchers("/api/**")
-				.hasAnyRole(RoleBasedAuthority.ROLE_USER.getRole(),
-						RoleBasedAuthority.ROLE_ADMIN.getRole())
-				.antMatchers("/actuator/health/**", "/actuator/info/**")
-				.permitAll()
-				.antMatchers("/actuator/**")
-				.hasAnyRole(RoleBasedAuthority.ROLE_ADMIN.getRole())
-				.anyRequest().authenticated()
+				.antMatchers("/**").permitAll() // Permite todas las rutas
 				.and()
 				.headers()
 				.frameOptions()
-				.sameOrigin()
+				.disable() // Deshabilita la protección de frameOptions
 				.and()
 				.sessionManagement()
-				.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-				.and()
-				.addFilterBefore(this.jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+				.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+
+		// Filtro JWT eliminado para entorno de desarrollo
 	}
 
 	@Bean

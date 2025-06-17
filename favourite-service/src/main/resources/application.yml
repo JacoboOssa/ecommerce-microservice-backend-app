@@ -27,6 +27,19 @@ resilience4j:
         sliding-window-size: 10
         wait-duration-in-open-state: 5s
         sliding-window-type: COUNT_BASED
+  bulkhead:
+    instances:
+      userServiceBulkhead:
+        maxConcurrentCalls: 1
+      productServiceBulkhead:
+        maxConcurrentCalls: 1
+  ratelimiter:
+    instances:
+      favouriteServiceRateLimiter:
+        limit-for-period: 2
+        limit-refresh-period: 120s
+        timeout-duration: 30s
+        register-health-indicator: true
 
 management:
   web:

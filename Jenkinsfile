@@ -202,7 +202,7 @@ pipeline {
                         def reportPath = "trivy-reports/${service}.html"
 
                         sh"""
-                            trivy image --format template \\
+                            trivy image --format template --scanners vuln \\
                             --template "@/opt/homebrew/Cellar/trivy/0.63.0/share/trivy/templates/html.tpl" \\
                             --severity HIGH,CRITICAL \\
                             -o ${reportPath} \\

@@ -156,3 +156,53 @@ This document provides a comprehensive analysis of the design patterns currently
 - Performance bottleneck identification
 - Debugging distributed transactions
 - Service dependency visualization
+
+---
+
+## 🔧 Additional Design Patterns Implemented
+
+This section documents the newly incorporated patterns that enhance system resilience, artifact management, and traffic control across the microservices.
+
+### 14. **Artifact Repository / External Configuration Pattern**
+**Where Applied**: CI pipeline using **Sonatype Nexus**
+- Nexus is used as an artifact repository to store `.jar` files generated in each build by Jenkins.
+- Each microservice publishes its versioned artifacts, enabling external deployments and reproducible configurations.
+
+**Benefits**:
+- Reliable artifact storage and retrieval
+- Supports rollback and reproducible deployments
+- Improves build traceability
+- Seamless integration with CI/CD pipelines
+
+---
+
+### 15. **Bulkhead Pattern**
+**Where Applied**: In services that make calls to other services:
+- `shopping-service`
+- `order-service`
+- `payment-service`
+- `favourite-service`
+
+- Implemented using **Resilience4j Bulkhead** to restrict the number of concurrent calls to downstream or external services.
+- In `favourite-service`, specific tests were conducted to validate fallback behavior under load.
+
+**Benefits**:
+- Failure isolation between services
+- Prevents resource exhaustion
+- Improves system stability under pressure
+- Enables graceful degradation
+
+---
+
+### 16. **Rate Limiter Pattern**
+**Where Applied**: `favourite-service`
+- Implemented using **Resilience4j RateLimiter** to limit the number of requests processed within a given time window.
+- Acts as a safeguard against traffic spikes and service abuse.
+
+**Benefits**:
+- Controls request flow
+- Protects against overload
+- Enhances user experience through fallback responses
+- Enforces fair usage policies
+
+---

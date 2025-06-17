@@ -240,3 +240,5 @@ La siguiente imagen muestra el board real de GitHub Projects utilizado durante e
 ![GitHub Projects Board - Metodología Ágil](/ecommerce-microservice-backend-app/docs/images/image-1.png)
 
 Esta captura demuestra la implementación exitosa de nuestra metodología de gestión por tareas, mostrando cómo GitHub Projects facilitó la transparencia y organización del trabajo durante el desarrollo del proyecto de microservicios.
+
+![GitHub Projects Board - Metodología Ágil](/ecommerce-microservice-backend-app/docs/images/image-2.png)

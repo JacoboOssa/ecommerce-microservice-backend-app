@@ -57,14 +57,14 @@ spec:
             httpGet:
               path: /app/actuator/health
               port: 8900
-            initialDelaySeconds: 60 
+            initialDelaySeconds: 120
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /app/actuator/health
               port: 8900
-            initialDelaySeconds: 30
+            initialDelaySeconds: 150
             periodSeconds: 10
             failureThreshold: 3
           volumeMounts:

@@ -524,7 +524,7 @@ pipeline {
                             --network ecommerce-test \
                             -v ${env.WORKSPACE}:/zap/wrk \
                             zaproxy/zap-stable \
-                            zap-full-scan.py \
+                            zap-baseline.py \
                             -t ${service.url} \
                             -r ${reportFile} \
                             -I

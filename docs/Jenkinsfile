@@ -1,0 +1,14 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage("realse notes") {
+            steps {
+                    sh '''
+                    /opt/homebrew/bin/convco changelog > RELEASE_NOTES.md
+                    '''
+                    archiveArtifacts artifacts: 'RELEASE_NOTES.md', fingerprint: true
+            }
+        }
+    }
+}

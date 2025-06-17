@@ -2,7 +2,7 @@ module "dev_cluster" {
     source     = "../main"
     env_name   = "dev"
     project_id = "${var.project_id}"
-    instance_type = "e2-small"
+    instance_type = "e2-medium"
     min_count      = 1
     max_count      = 2
     cluster_name = "k8s-cluster"
